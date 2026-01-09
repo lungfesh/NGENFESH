@@ -112,8 +112,6 @@ class Element {
         }
 
         void init() {
-            
-
             glGenVertexArrays(1, &VAO);
             glBindVertexArray(VAO);
 
@@ -140,6 +138,33 @@ class Element {
             if (wireframe == true)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         };
+
+        bool rotate = false;
+        glm::vec3 rotateAxis = glm::vec3(0.0f, 1.0f, 0.0f); // what axis(es) to apply rotation to
+        float rotationSpeed = 0.0f; // the speed at which we rotate
+        glm::vec3 pivot = glm::vec3(0.0f); // what point to rotate around
+
+        // if rotate is true, the element will rotate along rotateAxis axises, at rotationSpeed speed, around point pivot.
+        // pivot is the point RELATIVE TO THE MODEL, not the world
+
+        float currentAngle = 0.0f; // to track rotation over time
+        void update(float deltaTime) { // deltaTime is how long since last frame and current (i think)
+            if (rotate) {
+                currentAngle += rotationSpeed * deltaTime;
+                if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
+            }
+        }
+        
+        glm::mat4 getModelMatrix() const {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(x, y, z));
+            if (rotate) {
+                model = glm::translate(model, pivot);
+                model = glm::rotate(model, currentAngle, rotateAxis);
+                model = glm::translate(model, -pivot);
+            }
+            return model;
+        }
 
         ~Element() {
             glDeleteVertexArrays(1, &VAO);
@@ -224,53 +249,6 @@ int main() {
     glUseProgram(shaderProgram);
 
     std::vector<Element*> Objects;
-    Element cube;
-    // Cube vertices (positions only)
-    cube.vertices = {
-        // positions       
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f, // 0
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f, // 1
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, // 2
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f, // 3
-        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, // 4
-         0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, // 5
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f, // 6
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f, // 7
-    };
-
-    // Indices for drawing the cube using GL_TRIANGLES
-    cube.indices= {
-        // Back face
-        0, 1, 2,
-        2, 3, 0,
-        // Front face
-        4, 5, 6,
-        6, 7, 4,
-        // Left face
-        4, 0, 3,
-        3, 7, 4,
-        // Right face
-        1, 5, 6,
-        6, 2, 1,
-        // Bottom face
-        4, 5, 1,
-        1, 0, 4,
-        // Top face
-        3, 2, 6,
-        6, 7, 3
-    };
-    // cube.wireframe = true;
-    for (int i = 0; i < 15; i++) {
-        Element* e = new Element(cube);
-
-        e->x = dist(gen)*5.0f;
-        e->y = dist(gen)*5.0f;
-        e->z = dist(gen)*5.0f;
-        // e.init();
-        Objects.push_back(e);
-    }
-    // Objects.push_back(&cube);
-
     Element quad;
     quad.vertices = {
         -5.0f, -0.5f, -5.0f,  1.0f, 0.0f, 0.0f,
@@ -285,28 +263,48 @@ int main() {
     quad.x = 0.0f;
     quad.y = 0.0f;
     quad.init();
-    Objects.push_back(&quad);
+    // Objects.push_back(&quad);
 
     // x,y,z
-    Element x_indicator;
-    x_indicator.vertices = {
-        0.0f, 1.0f, 0.0f,   1.0f, 0.0f, 0.0f, // 0
-        1.0f, 1.0f, 0.0f,   1.0f, 0.0f, 0.0f, // 1
+    Element indicator;
+    indicator.vertices = {
+        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, // 0
+        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, // 1
 
-        0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f, // 2
-        0.0f, 2.0f, 0.0f,   0.0f, 1.0f, 0.0f, // 3
+        0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, // 2
+        0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f, // 3
 
-        0.0f, 1.0f, 0.0f,   0.0f, 0.0f, 1.0f, // 4
-        0.0f, 1.0f, 1.0f,   0.0f, 0.0f, 1.0f  // 5
+        0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f, // 4
+        0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f  // 5
     };
-    x_indicator.indices = {
+    indicator.indices = {
         0, 1,
         2, 3,
         4, 5
     };
-    x_indicator.draw_mode = GL_LINES;
-    x_indicator.init();
-    Objects.push_back(&x_indicator);
+    indicator.draw_mode = GL_LINES;
+    indicator.init();
+    Objects.push_back(&indicator);
+
+    Element spinning_line;
+    spinning_line.vertices = {
+        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f
+    };
+    spinning_line.indices = {
+        0, 1
+    };
+    spinning_line.x = 0;
+    spinning_line.z = 0;
+    spinning_line.y = 0;
+    spinning_line.draw_mode = GL_LINES;
+    spinning_line.rotate = true;
+    spinning_line.rotateAxis = glm::vec3(1.0f, 1.0f, 1.0f); // what axis(es) to apply rotation to
+    spinning_line.rotationSpeed = 5.0f; // the speed at which we rotate
+    spinning_line.pivot = glm::vec3(0.0f); // what point to rotate around
+    spinning_line.init();
+    Objects.push_back(&spinning_line);
+
 
     glUseProgram(shaderProgram);
     glEnable(GL_DEPTH_TEST);
@@ -336,14 +334,8 @@ int main() {
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
         for (Element* e : Objects) {
-            if (e == &cube) {
-                glUniform1f(glGetUniformLocation(shaderProgram, "time"), (float)glfwGetTime());
-            } else {
-                glUniform1f(glGetUniformLocation(shaderProgram, "time"), 0.0f);    
-            }
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(e->x, e->y, e->z));
-            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            e->update(deltaTime);
+            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(e->getModelMatrix()));
             e->draw();
         };
 
