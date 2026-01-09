@@ -243,10 +243,10 @@ int main() {
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if(!success) {
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::FAILED\n" << infoLog << "\n";
+        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << "\n";
     }
-
-    glUseProgram(shaderProgram);
+    // done with shader shit
+    // glUseProgram(shaderProgram);
 
     std::vector<Element*> Objects;
     Element quad;
@@ -306,7 +306,7 @@ int main() {
     Objects.push_back(&spinning_line);
 
 
-    glUseProgram(shaderProgram);
+    // glUseProgram(shaderProgram);
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -336,6 +336,7 @@ int main() {
         for (Element* e : Objects) {
             e->update(deltaTime);
             glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(e->getModelMatrix()));
+            glUseProgram(shaderProgram);
             e->draw();
         };
 
