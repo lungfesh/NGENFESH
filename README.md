@@ -1,7 +1,11 @@
 # NGENFESH
 *pronounced engine fesh*
 
-I started this project as a way to teach myself OpenGL. It is supposed to be a simple 3D engine that I hope one day I can use to make a cool game with.
+I started this project as a way to teach myself OpenGL. My goal is to make something with it in the future.
+
+Feel free to contribute. 
 
 ## CONTACT
+Join the discord server!
+
 https://discord.gg/sEbKEbJuKt
