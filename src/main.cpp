@@ -9,6 +9,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "shader.hpp"
+
 float windowWidth = 512.0f;
 float windowHeight = 512.0f;
 
@@ -39,27 +41,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (pitch < -89.9f)
         pitch = -89.9f;
 }
-
-const char *vertexShaderSource =
-"#version 460 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec3 aColor;\n"
-"out vec3 color;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main() {\n"
-    "gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "color = aColor;\n"
-"}\0";
-
-const char *fragmentShaderSource = 
-"#version 460 core\n"
-"out vec4 FragColor;\n"
-"in vec3 color;\n"
-"void main() {\n"
-    "FragColor = vec4(color, 1.0f);\n"
-"}\0";
 
 glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f,0.0f,-1.0f);
@@ -155,7 +136,7 @@ class Element {
             }
         }
         
-        glm::mat4 getModelMatrix() const {
+        glm::mat4 getMatrix() const {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(x, y, z));
             if (rotate) {
@@ -200,54 +181,7 @@ int main() {
     glViewport(0, 0, 512, 512);
     // callbacks
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);  
-
-    // shader shit
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-
-    int  success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-
-    if(!success) {
-        glGetShaderInfoLog(vertexShader,512,NULL,infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << "\n";
-    }
-
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-
-    if(!success) {
-        glGetShaderInfoLog(fragmentShader,512,NULL,infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT:COMPILATION_FAILED\n" << infoLog << "\n";
-    }
-
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if(!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << "\n";
-    }
-    // done with shader shit
-    // glUseProgram(shaderProgram);
-
+    glfwSetCursorPosCallback(window, mouse_callback);
     std::vector<Element*> Objects;
     Element quad;
     quad.vertices = {
@@ -305,8 +239,9 @@ int main() {
     spinning_line.init();
     Objects.push_back(&spinning_line);
 
+    Shader objectShader("shaders/object.vert", "shaders/object.frag");
 
-    // glUseProgram(shaderProgram);
+    // objectShader.use();
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -328,22 +263,18 @@ int main() {
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
         
-
-        // glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
+        objectShader.setMat4("view", view);
+        objectShader.setMat4("projection", projection);
         for (Element* e : Objects) {
             e->update(deltaTime);
-            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(e->getModelMatrix()));
-            glUseProgram(shaderProgram);
+            objectShader.setMat4("model", e->getMatrix());
+            objectShader.use();
             e->draw();
         };
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-    glDeleteProgram(shaderProgram);
     glfwTerminate();
 
     return 0;
