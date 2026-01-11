@@ -11,6 +11,9 @@
 
 #include "shader.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 float windowWidth = 512.0f;
 float windowHeight = 512.0f;
 
@@ -72,7 +75,51 @@ void processInput(GLFWwindow *window) {
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 }
 
+class Texture {
+    public:
+        unsigned int texture; // make texture object
+        void init(std::string textureFile) {
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+            int width, height, nrChannels;
+            unsigned char *data = stbi_load(textureFile.c_str(), &width, &height, &nrChannels, 0);
+            if (data)
+                {
+                    GLenum format;
+                if (nrChannels == 1) format = GL_RED;
+                else if (nrChannels == 3) format = GL_RGB;
+                else if (nrChannels == 4) format = GL_RGBA;
+                else {
+                    std::cout << "Unsupported texture format\n";
+                    stbi_image_free(data);
+                    return;
+                }
+
+                glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+                glGenerateMipmap(GL_TEXTURE_2D);
+            }
+            else
+            {
+                std::cout << "Failed to load texture" << std::endl;
+            }
+            stbi_image_free(data);
+        }
+        ~Texture() {
+            glDeleteTextures(1, &texture);
+        }
+
+        void use() const {
+            glBindTexture(GL_TEXTURE_2D, texture);
+        }
+        void unUse() const {
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+};
 
 class Element {
     public:
@@ -83,7 +130,10 @@ class Element {
 
         std::vector<float> vertices;
         std::vector<unsigned int> indices;
-        
+        std::string textureFile = "";
+        bool useTexture = false;
+        Texture texture;
+
         Element() = default;
 
         Element(const Element& other)
@@ -93,6 +143,8 @@ class Element {
         }
 
         void init() {
+            if (useTexture)
+                texture.init(textureFile);
             glGenVertexArrays(1, &VAO);
             glBindVertexArray(VAO);
 
@@ -105,19 +157,25 @@ class Element {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
             glEnableVertexAttribArray(0); 
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3*sizeof(float)));
             glEnableVertexAttribArray(1);
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6*sizeof(float)));
+            glEnableVertexAttribArray(2);
         };
         void draw() const {
-            if (wireframe == true)
+            if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+            if (useTexture)
+                texture.use();
             glBindVertexArray(VAO);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
             glDrawElements(draw_mode, indices.size(), GL_UNSIGNED_INT, 0);
-            if (wireframe == true)
+            if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+            if (useTexture)
+                texture.unUse();
         };
 
         bool rotate = false;
@@ -145,6 +203,10 @@ class Element {
                 model = glm::translate(model, -pivot);
             }
             return model;
+        }
+
+        bool getUseTexture() const {
+            return useTexture;
         }
 
         ~Element() {
@@ -185,10 +247,11 @@ int main() {
     std::vector<Element*> Objects;
     Element quad;
     quad.vertices = {
-        -5.0f, -0.5f, -5.0f,  1.0f, 0.0f, 0.0f,
-        5.0f, -0.5f, -5.0f,   0.0f, 1.0f, 0.0f,
-        5.0f, -0.5f, 5.0f,    0.0f, 0.0f, 1.0f,
-        -5.0f, -0.5f, 5.0f,   0.0f, 1.0f, 0.0f,
+//      X      Y      Z       R     G     B      
+        -5.0f, 0.0f, -5.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
+        5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // 1
+        5.0f, 0.0f, 5.0f,    0.0f, 0.0f, 1.0f,  1.0f, 1.0f, // 2
+        -5.0f, 0.0f, 5.0f,   0.0f, 1.0f, 1.0f,  0.0f, 1.0f, // 3
     };
     quad.indices = {
         0, 1, 2,
@@ -196,20 +259,62 @@ int main() {
     };
     quad.x = 0.0f;
     quad.y = 0.0f;
+    quad.useTexture = true;
+    quad.textureFile = "textures/hikingfesh.png";
     quad.init();
-    // Objects.push_back(&quad);
-
+    Objects.push_back(&quad);
+    
+    Element cube;
+    cube.vertices = {
+        // Positions          // Colors         // TexCoords
+        -0.5f, -0.5f, -0.5f,  1.0f,0.0f,0.0f,  0.0f,0.0f, // 0
+         0.5f, -0.5f, -0.5f,  0.0f,1.0f,0.0f,  1.0f,0.0f, // 1
+         0.5f,  0.5f, -0.5f,  0.0f,0.0f,1.0f,  1.0f,1.0f, // 2
+        -0.5f,  0.5f, -0.5f,  1.0f,1.0f,0.0f,  0.0f,1.0f, // 3
+    
+        -0.5f, -0.5f,  0.5f,  1.0f,0.0f,1.0f,  0.0f,0.0f, // 4
+         0.5f, -0.5f,  0.5f,  0.0f,1.0f,1.0f,  1.0f,0.0f, // 5
+         0.5f,  0.5f,  0.5f,  1.0f,1.0f,1.0f,  1.0f,1.0f, // 6
+        -0.5f,  0.5f,  0.5f,  0.0f,0.0f,0.0f,  0.0f,1.0f  // 7
+    };
+    cube.indices = {
+        // Back face
+        0, 1, 2,
+        2, 3, 0,
+        // Front face
+        4, 5, 6,
+        6, 7, 4,
+        // Left face
+        4, 0, 3,
+        3, 7, 4,
+        // Right face
+        1, 5, 6,
+        6, 2, 1,
+        // Bottom face
+        4, 5, 1,
+        1, 0, 4,
+        // Top face
+        3, 2, 6,
+        6, 7, 3
+    };
+    cube.x = 0.0f;
+    cube.y = 1.0f;
+    // quad2.useTexture = true;
+    // quad2.textureFile = "textures/hikingfesh.png";
+    cube.init();
+    Objects.push_back(&cube);
+    
     // x,y,z
     Element indicator;
     indicator.vertices = {
-        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, // 0
-        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f, // 1
+        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
+        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 1
 
-        0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f, // 2
-        0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f, // 3
+        0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // 2
+        0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // 3
 
-        0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f, // 4
-        0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f  // 5
+        0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // 4
+        0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // 5
     };
     indicator.indices = {
         0, 1,
@@ -220,28 +325,8 @@ int main() {
     indicator.init();
     Objects.push_back(&indicator);
 
-    Element spinning_line;
-    spinning_line.vertices = {
-        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f
-    };
-    spinning_line.indices = {
-        0, 1
-    };
-    spinning_line.x = 0;
-    spinning_line.z = 0;
-    spinning_line.y = 0;
-    spinning_line.draw_mode = GL_LINES;
-    spinning_line.rotate = true;
-    spinning_line.rotateAxis = glm::vec3(1.0f, 1.0f, 1.0f); // what axis(es) to apply rotation to
-    spinning_line.rotationSpeed = 5.0f; // the speed at which we rotate
-    spinning_line.pivot = glm::vec3(0.0f); // what point to rotate around
-    spinning_line.init();
-    Objects.push_back(&spinning_line);
-
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
 
-    // objectShader.use();
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -268,6 +353,7 @@ int main() {
         for (Element* e : Objects) {
             e->update(deltaTime);
             objectShader.setMat4("model", e->getMatrix());
+            objectShader.setBool("useTexture", e->getUseTexture());
             objectShader.use();
             e->draw();
         };

@@ -13,6 +13,7 @@ class Shader {
         Shader(std::string vertexShaderFile, std::string fragmentShaderFile);
         void use();
         void setMat4(const std::string &name, const glm::mat4 &value) const;
+        void setBool(const std::string &name, const bool &value) const;
 };
 
 #endif
