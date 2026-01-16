@@ -134,6 +134,9 @@ class Element {
         bool useTexture = false;
         Texture texture;
 
+        Shader* shader = nullptr;
+        glm::vec3 lightColor;
+
         Element() = default;
 
         Element(const Element& other)
@@ -164,7 +167,18 @@ class Element {
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6*sizeof(float)));
             glEnableVertexAttribArray(2);
         };
-        void draw() const {
+        void draw(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& lightColor) const {
+            if (!shader) return;
+
+
+            shader->use();
+            shader->setMat4("view", view);
+            shader->setMat4("projection", projection);
+            shader->setMat4("model", getMatrix());
+            shader->setBool("useTexture", getUseTexture());
+            shader->setVec3("lightColor", lightColor);
+            shader->setFloat("ambientStrength", 0.1f);
+
             if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
             if (useTexture)
@@ -247,7 +261,7 @@ int main() {
     std::vector<Element*> Objects;
     Element quad;
     quad.vertices = {
-//      X      Y      Z       R     G     B      
+//      X      Y      Z       R     G     B     TEXCOORDS
         -5.0f, 0.0f, -5.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
         5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // 1
         5.0f, 0.0f, 5.0f,    0.0f, 0.0f, 1.0f,  1.0f, 1.0f, // 2
@@ -259,7 +273,7 @@ int main() {
     };
     quad.x = 0.0f;
     quad.y = 0.0f;
-    quad.useTexture = true;
+    // quad.useTexture = true;
     quad.textureFile = "textures/hikingfesh.png";
     quad.init();
     Objects.push_back(&quad);
@@ -268,14 +282,14 @@ int main() {
     cube.vertices = {
         // Positions          // Colors         // TexCoords
         -0.5f, -0.5f, -0.5f,  1.0f,0.0f,0.0f,  0.0f,0.0f, // 0
-         0.5f, -0.5f, -0.5f,  0.0f,1.0f,0.0f,  1.0f,0.0f, // 1
-         0.5f,  0.5f, -0.5f,  0.0f,0.0f,1.0f,  1.0f,1.0f, // 2
-        -0.5f,  0.5f, -0.5f,  1.0f,1.0f,0.0f,  0.0f,1.0f, // 3
-    
-        -0.5f, -0.5f,  0.5f,  1.0f,0.0f,1.0f,  0.0f,0.0f, // 4
-         0.5f, -0.5f,  0.5f,  0.0f,1.0f,1.0f,  1.0f,0.0f, // 5
-         0.5f,  0.5f,  0.5f,  1.0f,1.0f,1.0f,  1.0f,1.0f, // 6
-        -0.5f,  0.5f,  0.5f,  0.0f,0.0f,0.0f,  0.0f,1.0f  // 7
+         0.5f, -0.5f, -0.5f,  1.0f,0.0f,0.0f,  1.0f,0.0f, // 1
+         0.5f,  0.5f, -0.5f,  1.0f,0.0f,0.0f,  1.0f,1.0f, // 2
+        -0.5f,  0.5f, -0.5f,  1.0f,0.0f,0.0f,  0.0f,1.0f, // 3
+
+        -0.5f, -0.5f,  0.5f,  1.0f,0.0f,0.0f,  0.0f,0.0f, // 4
+         0.5f, -0.5f,  0.5f,  1.0f,0.0f,0.0f,  1.0f,0.0f, // 5
+         0.5f,  0.5f,  0.5f,  1.0f,0.0f,0.0f,  1.0f,1.0f, // 6
+        -0.5f,  0.5f,  0.5f,  1.0f,0.0f,0.0f,  0.0f,1.0f  // 7
     };
     cube.indices = {
         // Back face
@@ -299,15 +313,56 @@ int main() {
     };
     cube.x = 0.0f;
     cube.y = 1.0f;
-    // quad2.useTexture = true;
-    // quad2.textureFile = "textures/hikingfesh.png";
+    // cube.useTexture = true;
+    cube.rotate = true;
+    cube.rotateAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    cube.rotationSpeed = 3.0f;
+    cube.textureFile = "textures/lungfeshmiku.png";
     cube.init();
     Objects.push_back(&cube);
     
+    Element lightSource;
+    lightSource.vertices = {
+        // Positions          // Colors         // TexCoords
+        -0.5f, -0.5f, -0.5f,  1.0f,0.74f,0.0f,  0.0f,0.0f, // 0
+         0.5f, -0.5f, -0.5f,  1.0f,0.74f,0.0f,  1.0f,0.0f, // 1
+         0.5f,  0.5f, -0.5f,  1.0f,0.74f,0.0f,  1.0f,1.0f, // 2
+        -0.5f,  0.5f, -0.5f,  1.0f,0.74f,0.0f,  0.0f,1.0f, // 3
+    
+        -0.5f, -0.5f,  0.5f,  1.0f,0.74f,0.0f,  0.0f,0.0f, // 4
+         0.5f, -0.5f,  0.5f,  1.0f,0.74f,0.0f,  1.0f,0.0f, // 5
+         0.5f,  0.5f,  0.5f,  1.0f,0.74f,0.0f,  1.0f,1.0f, // 6
+        -0.5f,  0.5f,  0.5f,  1.0f,0.74f,0.0f,  0.0f,1.0f  // 7
+    };
+    lightSource.indices = {
+        // Back face
+        0, 1, 2,
+        2, 3, 0,
+        // Front face
+        4, 5, 6,
+        6, 7, 4,
+        // Left face
+        4, 0, 3,
+        3, 7, 4,
+        // Right face
+        1, 5, 6,
+        6, 2, 1,
+        // Bottom face
+        4, 5, 1,
+        1, 0, 4,
+        // Top face
+        3, 2, 6,
+        6, 7, 3
+    };
+    lightSource.x = 5.0f;
+    lightSource.y = 1.0f;
+    lightSource.init();
+    Objects.push_back(&lightSource);
+
     // x,y,z
     Element indicator;
     indicator.vertices = {
-        0.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
+        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
         1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 1
 
         0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // 2
@@ -323,9 +378,16 @@ int main() {
     };
     indicator.draw_mode = GL_LINES;
     indicator.init();
-    Objects.push_back(&indicator);
+    // Objects.push_back(&indicator);
 
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
+    Shader lightShader("shaders/object.vert", "shaders/light.frag");
+
+    lightSource.shader = &lightShader;
+    cube.shader = &objectShader;
+    quad.shader = &objectShader;
+
+    lightSource.lightColor = glm::vec3(1.0f, 0.74f, 0.0f);
 
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
@@ -348,14 +410,9 @@ int main() {
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
         
-        objectShader.setMat4("view", view);
-        objectShader.setMat4("projection", projection);
         for (Element* e : Objects) {
             e->update(deltaTime);
-            objectShader.setMat4("model", e->getMatrix());
-            objectShader.setBool("useTexture", e->getUseTexture());
-            objectShader.use();
-            e->draw();
+            e->draw(view, projection, lightSource.lightColor);
         };
 
         glfwSwapBuffers(window);
