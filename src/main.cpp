@@ -10,6 +10,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.hpp"
+// #include "lighting.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -123,6 +124,7 @@ class Texture {
 
 class Element {
     public:
+        bool RENDERXYZ = true, RENDERCOLOR = true, RENDERTEX = true, RENDERNORM = true;
         unsigned int VAO, VBO, EBO;
         float x,y,z;
         bool wireframe = false;
@@ -159,15 +161,19 @@ class Element {
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-            glEnableVertexAttribArray(0); 
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3*sizeof(float)));
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
+        
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3*sizeof(float)));
             glEnableVertexAttribArray(1);
-            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6*sizeof(float)));
+        
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6*sizeof(float)));
             glEnableVertexAttribArray(2);
+
+            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8*sizeof(float)));
+            glEnableVertexAttribArray(3);
         };
-        void draw(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& lightColor) const {
+        void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource) const {
             if (!shader) return;
 
 
@@ -176,8 +182,9 @@ class Element {
             shader->setMat4("projection", projection);
             shader->setMat4("model", getMatrix());
             shader->setBool("useTexture", getUseTexture());
-            shader->setVec3("lightColor", lightColor);
+            shader->setVec3("lightColor", lightSource.lightColor);
             shader->setFloat("ambientStrength", 0.1f);
+            shader->setVec3("lightPos", glm::vec3(lightSource.x, lightSource.y, lightSource.z));
 
             if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -261,16 +268,17 @@ int main() {
     std::vector<Element*> Objects;
     Element quad;
     quad.vertices = {
-//      X      Y      Z       R     G     B     TEXCOORDS
-        -5.0f, 0.0f, -5.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
-        5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // 1
-        5.0f, 0.0f, 5.0f,    0.0f, 0.0f, 1.0f,  1.0f, 1.0f, // 2
-        -5.0f, 0.0f, 5.0f,   0.0f, 1.0f, 1.0f,  0.0f, 1.0f, // 3
+//      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
+        -5.0f, 0.0f, -5.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0.0f, -1.0f, 0.0f,// 0
+        5.0f, 0.0f, -5.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,   0.0f, -1.0f, 0.0f,// 1
+        5.0f, 0.0f, 5.0f,    1.0f, 1.0f, 1.0f,   1.0f, 1.0f,   0.0f, -1.0f, 0.0f,// 2
+        -5.0f, 0.0f, 5.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,   0.0f, -1.0f, 0.0f,// 3
     };
     quad.indices = {
         0, 1, 2,
         2, 3, 0
     };
+    // quad.vertices = addNormalsToVerticesSmooth(quad.vertices, quad.indices);
     quad.x = 0.0f;
     quad.y = 0.0f;
     // quad.useTexture = true;
@@ -280,82 +288,110 @@ int main() {
     
     Element cube;
     cube.vertices = {
-        // Positions          // Colors         // TexCoords
-        -0.5f, -0.5f, -0.5f,  1.0f,0.0f,0.0f,  0.0f,0.0f, // 0
-         0.5f, -0.5f, -0.5f,  1.0f,0.0f,0.0f,  1.0f,0.0f, // 1
-         0.5f,  0.5f, -0.5f,  1.0f,0.0f,0.0f,  1.0f,1.0f, // 2
-        -0.5f,  0.5f, -0.5f,  1.0f,0.0f,0.0f,  0.0f,1.0f, // 3
-
-        -0.5f, -0.5f,  0.5f,  1.0f,0.0f,0.0f,  0.0f,0.0f, // 4
-         0.5f, -0.5f,  0.5f,  1.0f,0.0f,0.0f,  1.0f,0.0f, // 5
-         0.5f,  0.5f,  0.5f,  1.0f,0.0f,0.0f,  1.0f,1.0f, // 6
-        -0.5f,  0.5f,  0.5f,  1.0f,0.0f,0.0f,  0.0f,1.0f  // 7
+        // Back face (Z = -0.5)
+        -0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+    
+        // Front face (Z = +0.5)
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+    
+        // Left face (X = -0.5)
+        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+    
+        // Right face (X = +0.5)
+         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+    
+        // Bottom face (Y = -0.5)
+        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+    
+        // Top face (Y = +0.5)
+        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
     };
     cube.indices = {
-        // Back face
-        0, 1, 2,
-        2, 3, 0,
-        // Front face
-        4, 5, 6,
-        6, 7, 4,
-        // Left face
-        4, 0, 3,
-        3, 7, 4,
-        // Right face
-        1, 5, 6,
-        6, 2, 1,
-        // Bottom face
-        4, 5, 1,
-        1, 0, 4,
-        // Top face
-        3, 2, 6,
-        6, 7, 3
+        0,  1,  2,   2,  3,  0,   // back
+        4,  5,  6,   6,  7,  4,   // front
+        8,  9,  10,  10, 11, 8,   // left
+        12, 13, 14,  14, 15, 12,   // right
+        16, 17, 18,  18, 19, 16,   // bottom
+        20, 21, 22,  22, 23, 20    // top
     };
-    cube.x = 0.0f;
+    cube.x = 2.0f;
     cube.y = 1.0f;
     // cube.useTexture = true;
     cube.rotate = true;
-    cube.rotateAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    cube.rotationSpeed = 3.0f;
-    cube.textureFile = "textures/lungfeshmiku.png";
+    cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
+    cube.rotationSpeed = 0.25f;
+    cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
+
     cube.init();
     Objects.push_back(&cube);
     
     Element lightSource;
     lightSource.vertices = {
-        // Positions          // Colors         // TexCoords
-        -0.5f, -0.5f, -0.5f,  1.0f,0.74f,0.0f,  0.0f,0.0f, // 0
-         0.5f, -0.5f, -0.5f,  1.0f,0.74f,0.0f,  1.0f,0.0f, // 1
-         0.5f,  0.5f, -0.5f,  1.0f,0.74f,0.0f,  1.0f,1.0f, // 2
-        -0.5f,  0.5f, -0.5f,  1.0f,0.74f,0.0f,  0.0f,1.0f, // 3
+        // Back face (Z = -0.5)
+        -0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
     
-        -0.5f, -0.5f,  0.5f,  1.0f,0.74f,0.0f,  0.0f,0.0f, // 4
-         0.5f, -0.5f,  0.5f,  1.0f,0.74f,0.0f,  1.0f,0.0f, // 5
-         0.5f,  0.5f,  0.5f,  1.0f,0.74f,0.0f,  1.0f,1.0f, // 6
-        -0.5f,  0.5f,  0.5f,  1.0f,0.74f,0.0f,  0.0f,1.0f  // 7
+        // Front face (Z = +0.5)
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+    
+        // Left face (X = -0.5)
+        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+    
+        // Right face (X = +0.5)
+         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+    
+        // Bottom face (Y = -0.5)
+        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+    
+        // Top face (Y = +0.5)
+        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
     };
     lightSource.indices = {
-        // Back face
-        0, 1, 2,
-        2, 3, 0,
-        // Front face
-        4, 5, 6,
-        6, 7, 4,
-        // Left face
-        4, 0, 3,
-        3, 7, 4,
-        // Right face
-        1, 5, 6,
-        6, 2, 1,
-        // Bottom face
-        4, 5, 1,
-        1, 0, 4,
-        // Top face
-        3, 2, 6,
-        6, 7, 3
+        0,  1,  2,   2,  3,  0,   // back
+        4,  5,  6,   6,  7,  4,   // front
+        8,  9,  10,  10, 11, 8,   // left
+        12, 13, 14,  14, 15, 12,   // right
+        16, 17, 18,  18, 19, 16,   // bottom
+        20, 21, 22,  22, 23, 20    // top
     };
     lightSource.x = 5.0f;
     lightSource.y = 1.0f;
+    lightSource.z = 0.0f;
     lightSource.init();
     Objects.push_back(&lightSource);
 
@@ -379,16 +415,14 @@ int main() {
     indicator.draw_mode = GL_LINES;
     indicator.init();
     // Objects.push_back(&indicator);
-
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
-    Shader lightShader("shaders/object.vert", "shaders/light.frag");
+    Shader lightShader("shaders/light.vert", "shaders/light.frag");
 
     lightSource.shader = &lightShader;
     cube.shader = &objectShader;
     quad.shader = &objectShader;
 
     lightSource.lightColor = glm::vec3(1.0f, 0.74f, 0.0f);
-
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -412,7 +446,7 @@ int main() {
         
         for (Element* e : Objects) {
             e->update(deltaTime);
-            e->draw(view, projection, lightSource.lightColor);
+            e->draw(view, projection, lightSource);
         };
 
         glfwSwapBuffers(window);
