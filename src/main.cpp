@@ -273,22 +273,21 @@ int main() {
     Element quad;
     quad.vertices = {
 //      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
-        -5.0f, 0.0f, -5.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0.0f, -1.0f, 0.0f,// 0
-        5.0f, 0.0f, -5.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,   0.0f, -1.0f, 0.0f,// 1
-        5.0f, 0.0f, 5.0f,    1.0f, 1.0f, 1.0f,   1.0f, 1.0f,   0.0f, -1.0f, 0.0f,// 2
-        -5.0f, 0.0f, 5.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,   0.0f, -1.0f, 0.0f,// 3
+        -5.0f, 0.0f, -5.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 0
+        5.0f, 0.0f, -5.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 1
+        5.0f, 0.0f, 5.0f,    1.0f, 1.0f, 1.0f,   1.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 2
+        -5.0f, 0.0f, 5.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 3
     };
     quad.indices = {
         0, 1, 2,
         2, 3, 0
     };
-    // quad.vertices = addNormalsToVerticesSmooth(quad.vertices, quad.indices);
     quad.x = 0.0f;
-    quad.y = 0.0f;
-    // quad.useTexture = true;
-    quad.textureFile = "textures/hikingfesh.png";
+    quad.y = -5.0f;
+    quad.useTexture = true;
+    quad.textureFile = "textures/doomerfesh.png";
     quad.init();
-    // Objects.push_back(&quad);
+    Objects.push_back(&quad);
     
     Element cube;
     cube.vertices = {
