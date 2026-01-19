@@ -173,7 +173,7 @@ class Element {
             glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8*sizeof(float)));
             glEnableVertexAttribArray(3);
         };
-        void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource) const {
+        void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos) const {
             if (!shader) return;
 
 
@@ -183,9 +183,8 @@ class Element {
             shader->setMat4("model", getMatrix());
             shader->setBool("useTexture", getUseTexture());
             shader->setVec3("lightColor", lightSource.lightColor);
-            shader->setFloat("ambientStrength", 0.1f);
             shader->setVec3("lightPos", glm::vec3(lightSource.x, lightSource.y, lightSource.z));
-
+            shader->setVec3("viewPos", cameraPos);
             if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
             if (useTexture)
@@ -200,6 +199,8 @@ class Element {
         };
 
         bool rotate = false;
+        bool rotateOnce = false;
+        float rotateOnceAngle = 0.0f;
         glm::vec3 rotateAxis = glm::vec3(0.0f, 1.0f, 0.0f); // what axis(es) to apply rotation to
         float rotationSpeed = 0.0f; // the speed at which we rotate
         glm::vec3 pivot = glm::vec3(0.0f); // what point to rotate around
@@ -210,7 +211,10 @@ class Element {
         float currentAngle = 0.0f; // to track rotation over time
         void update(float deltaTime) { // deltaTime is how long since last frame and current (i think)
             if (rotate) {
-                currentAngle += rotationSpeed * deltaTime;
+                if (rotateOnce)
+                    currentAngle = rotateOnceAngle;
+                else
+                    currentAngle += rotationSpeed * deltaTime;
                 if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
             }
         }
@@ -284,39 +288,39 @@ int main() {
     // quad.useTexture = true;
     quad.textureFile = "textures/hikingfesh.png";
     quad.init();
-    Objects.push_back(&quad);
+    // Objects.push_back(&quad);
     
     Element cube;
     cube.vertices = {
         // Back face (Z = -0.5)
-        -0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+        -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,    0.0f, 1.0f, 0.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,    0.0f, 0.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
     
         // Front face (Z = +0.5)
-        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
     
         // Left face (X = -0.5)
-        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
     
         // Right face (X = +0.5)
-         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
     
         // Bottom face (Y = -0.5)
-        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
     
         // Top face (Y = +0.5)
         -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
@@ -333,12 +337,15 @@ int main() {
         20, 21, 22,  22, 23, 20    // top
     };
     cube.x = 2.0f;
-    cube.y = 1.0f;
-    // cube.useTexture = true;
+    cube.y = -1.0f;
+    cube.useTexture = true;
     cube.rotate = true;
+    cube.rotateOnce = true;
+    cube.rotateOnceAngle = 90.0f;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
-    cube.rotationSpeed = 0.25f;
+    cube.rotationSpeed = 0.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
+    cube.textureFile = "textures/hikingfesh.png";
 
     cube.init();
     Objects.push_back(&cube);
@@ -422,7 +429,7 @@ int main() {
     cube.shader = &objectShader;
     quad.shader = &objectShader;
 
-    lightSource.lightColor = glm::vec3(1.0f, 0.74f, 0.0f);
+    lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -446,7 +453,7 @@ int main() {
         
         for (Element* e : Objects) {
             e->update(deltaTime);
-            e->draw(view, projection, lightSource);
+            e->draw(view, projection, lightSource, cameraPos);
         };
 
         glfwSwapBuffers(window);
