@@ -46,34 +46,41 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
         pitch = -89.9f;
 }
 
-glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,0.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f,0.0f,-1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
+glm::vec3 forward;
+glm::vec3 right;
+bool fpsMovement = true;
+
 void processInput(GLFWwindow *window) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    // if (glfwGetMouseButton(window, 0) && !lastLeftClickState) {
-    //     if (rotateUp) {
-    //         rotateUp = false;
-    //     } else {
-    //         rotateUp = true;
-    //     }
-    // }
-    // lastLeftClickState = glfwGetMouseButton(window, 0);
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
     float cameraSpeed = 2.5f * deltaTime;
+
+    if (fpsMovement){
+        forward.x = cos(glm::radians(yaw));
+        forward.y = 0.0f;
+        forward.z = sin(glm::radians(yaw));
+        forward = glm::normalize(forward);
+    } else {
+        forward = cameraFront;
+    }
+
+    right = glm::normalize(glm::cross(forward,cameraUp));
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
+        cameraPos += cameraSpeed * forward;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
+        cameraPos -= cameraSpeed * forward;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        cameraPos -= right * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        cameraPos += right * cameraSpeed;
 }
 
 class Texture {
@@ -283,7 +290,7 @@ int main() {
         2, 3, 0
     };
     quad.x = 0.0f;
-    quad.y = -5.0f;
+    quad.y = -1.0f;
     quad.useTexture = true;
     quad.textureFile = "textures/doomerfesh.png";
     quad.init();
@@ -339,10 +346,10 @@ int main() {
     cube.y = -1.0f;
     cube.useTexture = true;
     cube.rotate = true;
-    cube.rotateOnce = true;
-    cube.rotateOnceAngle = 90.0f;
+    // cube.rotateOnce = true;
+    // cube.rotateOnceAngle = 90.0f;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
-    cube.rotationSpeed = 0.0f;
+    cube.rotationSpeed = 1.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
     cube.textureFile = "textures/doomerfesh.png";
 
