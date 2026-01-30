@@ -53,7 +53,7 @@ float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 glm::vec3 forward;
 glm::vec3 right;
-bool fpsMovement = true;
+bool fpsMovement = false;
 
 void processInput(GLFWwindow *window) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -206,22 +206,15 @@ class Element {
         };
 
         bool rotate = false;
-        bool rotateOnce = false;
-        float rotateOnceAngle = 0.0f;
         glm::vec3 rotateAxis = glm::vec3(0.0f, 1.0f, 0.0f); // what axis(es) to apply rotation to
         float rotationSpeed = 0.0f; // the speed at which we rotate
         glm::vec3 pivot = glm::vec3(0.0f); // what point to rotate around
-
-        // if rotate is true, the element will rotate along rotateAxis axises, at rotationSpeed speed, around point pivot.
-        // pivot is the point RELATIVE TO THE MODEL, not the world
+        glm::vec3 rotation = glm::vec3(0.0f); // initial orientation
 
         float currentAngle = 0.0f; // to track rotation over time
         void update(float deltaTime) { // deltaTime is how long since last frame and current (i think)
             if (rotate) {
-                if (rotateOnce)
-                    currentAngle = rotateOnceAngle;
-                else
-                    currentAngle += rotationSpeed * deltaTime;
+                currentAngle += rotationSpeed * deltaTime;
                 if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
             }
         }
@@ -231,6 +224,9 @@ class Element {
             model = glm::translate(model, glm::vec3(x, y, z));
             if (rotate) {
                 model = glm::translate(model, pivot);
+                model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
+                model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+                model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
                 model = glm::rotate(model, currentAngle, rotateAxis);
                 model = glm::translate(model, -pivot);
             }
@@ -346,8 +342,6 @@ int main() {
     cube.y = -1.0f;
     cube.useTexture = true;
     cube.rotate = true;
-    // cube.rotateOnce = true;
-    // cube.rotateOnceAngle = 90.0f;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
     cube.rotationSpeed = 1.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -356,6 +350,30 @@ int main() {
     cube.init();
     Objects.push_back(&cube);
     
+    Element wall;
+    wall.vertices = {
+//      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
+        -5.0f, 0.0f, -5.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 0
+        5.0f, 0.0f, -5.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 1
+        5.0f, 0.0f, 5.0f,    1.0f, 1.0f, 1.0f,   1.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 2
+        -5.0f, 0.0f, 5.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 3
+    };
+    wall.indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+    wall.x = 0.0f;
+    wall.y = 0.0f;
+    wall.z = -5.0f;
+    wall.rotate = true;
+    wall.rotation = glm::vec3(glm::radians(90.0f), glm::radians(0.0f), glm::radians(90.0f));
+    wall.rotateAxis = glm::vec3(1.0f,1.0f,1.0f);
+    wall.rotationSpeed = 1.0f;
+    wall.useTexture = true;
+    wall.textureFile = "textures/doomerfesh.png";
+    wall.init();
+    Objects.push_back(&wall);
+
     Element lightSource;
     lightSource.vertices = {
         // Back face (Z = -0.5)
@@ -431,6 +449,7 @@ int main() {
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
 
+    wall.shader = &objectShader;
     lightSource.shader = &lightShader;
     cube.shader = &objectShader;
     quad.shader = &objectShader;
