@@ -25,8 +25,28 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 } // called each time window is resized, and sets viewport size
 
 float lastMouseX = windowWidth/2, lastMouseY = windowHeight/2;
-float yaw;
-float pitch;
+
+struct Camera {
+    glm::vec3 pos{0.0f};
+    glm::vec3 front{0.0f};
+    glm::vec3 up{0.0f};
+
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    float speed = 2.5f;
+    float sensitivity = 0.1f;
+
+    glm::mat4 view() const {
+        return glm::lookAt(pos,pos+front,up);
+    }
+};
+
+Camera mainCamera {
+    .pos = glm::vec3(0.0f, 0.0f, 3.0f),
+    .front = glm::vec3(0.0f, 0.0f, -1.0f),
+    .up = glm::vec3(0.0f, 1.0f, 0.0f)
+};
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     float xoffset = xpos - lastMouseX;
     float yoffset = lastMouseY - ypos;
@@ -37,22 +57,16 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     xoffset *= sensitivity;
     yoffset *= sensitivity;
 
-    yaw += xoffset;
-    pitch += yoffset;
+    mainCamera.yaw += xoffset;
+    mainCamera.pitch += yoffset;
 
-    if (pitch > 89.9f)
-        pitch = 89.9f;
-    if (pitch < -89.9f)
-        pitch = -89.9f;
+    if (mainCamera.pitch > 89.9f)
+        mainCamera.pitch = 89.9f;
+    if (mainCamera.pitch < -89.9f)
+        mainCamera.pitch = -89.9f;
 }
-
-glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,0.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f,0.0f,-1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
-glm::vec3 forward;
-glm::vec3 right;
 bool fpsMovement = false;
 
 void processInput(GLFWwindow *window) {
@@ -61,26 +75,28 @@ void processInput(GLFWwindow *window) {
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
-    float cameraSpeed = 2.5f * deltaTime;
+    float cameraSpeed = mainCamera.speed * deltaTime;
+    glm::vec3 forward;
+
 
     if (fpsMovement){
-        forward.x = cos(glm::radians(yaw));
+        forward.x = cos(glm::radians(mainCamera.yaw));
         forward.y = 0.0f;
-        forward.z = sin(glm::radians(yaw));
+        forward.z = sin(glm::radians(mainCamera.yaw));
         forward = glm::normalize(forward);
     } else {
-        forward = cameraFront;
+        forward = mainCamera.front;
     }
 
-    right = glm::normalize(glm::cross(forward,cameraUp));
+    glm::vec3 right = glm::normalize(glm::cross(mainCamera.front,mainCamera.up));
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * forward;
+        mainCamera.pos += cameraSpeed * forward;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * forward;
+        mainCamera.pos -= cameraSpeed * forward;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= right * cameraSpeed;
+        mainCamera.pos -= right * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += right * cameraSpeed;
+        mainCamera.pos += right * cameraSpeed;
 }
 
 class Texture {
@@ -147,12 +163,6 @@ class Element {
         glm::vec3 lightColor;
 
         Element() = default;
-
-        Element(const Element& other)
-            : x(other.x), y(other.y), z(other.z),
-              vertices(other.vertices), indices(other.indices) {
-            init(); // create new VAO/VBO/EBO
-        }
 
         void init() {
             if (useTexture)
@@ -426,26 +436,6 @@ int main() {
     lightSource.init();
     Objects.push_back(&lightSource);
 
-    // x,y,z
-    Element indicator;
-    indicator.vertices = {
-        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 0
-        1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // 1
-
-        0.0f, 0.0f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // 2
-        0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // 3
-
-        0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // 4
-        0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // 5
-    };
-    indicator.indices = {
-        0, 1,
-        2, 3,
-        4, 5
-    };
-    indicator.draw_mode = GL_LINES;
-    indicator.init();
-    // Objects.push_back(&indicator);
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
 
@@ -465,20 +455,17 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
         glm::vec3 direction;
-        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        direction.y = sin(glm::radians(pitch));
-        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        cameraFront = glm::normalize(direction);
-
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
+        direction.x = cos(glm::radians(mainCamera.yaw)) * cos(glm::radians(mainCamera.pitch));
+        direction.y = sin(glm::radians(mainCamera.pitch));
+        direction.z = sin(glm::radians(mainCamera.yaw)) * cos(glm::radians(mainCamera.pitch));
+        mainCamera.front = glm::normalize(direction);
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
         
         for (Element* e : Objects) {
             e->update(deltaTime);
-            e->draw(view, projection, lightSource, cameraPos);
+            e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos);
         };
 
         glfwSwapBuffers(window);
