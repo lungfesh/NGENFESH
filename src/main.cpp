@@ -149,7 +149,8 @@ class Element {
     public:
         bool RENDERXYZ = true, RENDERCOLOR = true, RENDERTEX = true, RENDERNORM = true;
         unsigned int VAO, VBO, EBO;
-        float x,y,z;
+        glm::vec3 position;
+        glm::vec3 velocity;
         bool wireframe = false;
         GLenum draw_mode = GL_TRIANGLES;
 
@@ -200,7 +201,7 @@ class Element {
             shader->setMat4("model", getMatrix());
             shader->setBool("useTexture", getUseTexture());
             shader->setVec3("lightColor", lightSource.lightColor);
-            shader->setVec3("lightPos", glm::vec3(lightSource.x, lightSource.y, lightSource.z));
+            shader->setVec3("lightPos", glm::vec3(lightSource.position.x, lightSource.position.y, lightSource.position.z));
             shader->setVec3("viewPos", cameraPos);
             if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -231,7 +232,7 @@ class Element {
         
         glm::mat4 getMatrix() const {
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(x, y, z));
+            model = glm::translate(model, position);
             if (rotate) {
                 model = glm::translate(model, pivot);
                 model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
@@ -247,12 +248,46 @@ class Element {
             return useTexture;
         }
 
+        void physics_step(float dt) {
+            // if (position.y >= -1.0f) {
+                // velocity.y += -9.8*dt;    
+            // }
+            // velocity.y += -9.8*dt;
+
+            position += velocity * dt; // apply velocity
+
+            // now dampen so it doesn't fly forever
+            float damping = 2.0f; // units per second
+            if (glm::length(velocity) > 0.0f) {
+                glm::vec3 decel = glm::normalize(velocity) * damping * dt;
+                if (glm::length(decel) > glm::length(velocity))
+                    velocity = glm::vec3(0.0f); // stop completely
+                else
+                    velocity -= decel;
+            }
+        }
+
         ~Element() {
             glDeleteVertexArrays(1, &VAO);
             glDeleteBuffers(1, &VBO);
             glDeleteBuffers(1, &EBO);
         }
 };
+
+// given position, go thru Element list and check if any Element is within 1u of position.
+// if true, calc dir from Element.pos + 1u to given position, then apply force to Element in the -direction
+void detectCollision(glm::vec3 position, std::vector<Element*> Objects) {
+    // yes, yes, yes, i know. it's called detect collisions but it applies some velocities and shit aswell. calm your tits
+    for (Element* e : Objects) {
+        if (position == e->position) continue; // skip over itself
+        glm::vec3 diff = position-e->position;
+        if (glm::length(diff) <= 1.0f) {
+            glm::vec3 direction = glm::normalize(diff);
+
+            e->velocity -= direction*2.0f;
+        }
+    } // holy terrible code
+}
 
 int main() {
     std::random_device rd;
@@ -295,8 +330,8 @@ int main() {
         0, 1, 2,
         2, 3, 0
     };
-    quad.x = 0.0f;
-    quad.y = -1.0f;
+    quad.position.x = 0.0f;
+    quad.position.y = -1.0f;
     quad.useTexture = true;
     quad.textureFile = "textures/doomerfesh.png";
     quad.init();
@@ -348,8 +383,8 @@ int main() {
         16, 17, 18,  18, 19, 16,   // bottom
         20, 21, 22,  22, 23, 20    // top
     };
-    cube.x = 2.0f;
-    cube.y = -1.0f;
+    cube.position.x = 2.0f;
+    cube.position.y = -1.0f;
     cube.useTexture = true;
     cube.rotate = true;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
@@ -372,9 +407,9 @@ int main() {
         0, 1, 2,
         2, 3, 0
     };
-    wall.x = 0.0f;
-    wall.y = 0.0f;
-    wall.z = -5.0f;
+    wall.position.x = 0.0f;
+    wall.position.y = 0.0f;
+    wall.position.z = -5.0f;
     wall.rotate = true;
     wall.rotation = glm::vec3(glm::radians(90.0f), glm::radians(0.0f), glm::radians(90.0f));
     wall.rotateAxis = glm::vec3(1.0f,1.0f,1.0f);
@@ -430,9 +465,9 @@ int main() {
         16, 17, 18,  18, 19, 16,   // bottom
         20, 21, 22,  22, 23, 20    // top
     };
-    lightSource.x = 5.0f;
-    lightSource.y = 1.0f;
-    lightSource.z = 0.0f;
+    lightSource.position.x = 5.0f;
+    lightSource.position.y = 1.0f;
+    lightSource.position.z = 0.0f;
     lightSource.init();
     Objects.push_back(&lightSource);
 
@@ -445,12 +480,28 @@ int main() {
     quad.shader = &objectShader;
 
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    float dt = 1.0f/60.0f;
+    float accumulator = 0.0f;
+
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
-        
+
+        // physics shit
+        accumulator += deltaTime;
+        while (accumulator >= dt) {
+            for (Element* e : Objects) {
+                detectCollision(mainCamera.pos, Objects);
+                detectCollision(e->position, Objects);
+                e->physics_step(dt);
+            }
+            accumulator -= dt;    
+        } 
+
+        // now onto rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -462,7 +513,7 @@ int main() {
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
-        
+
         for (Element* e : Objects) {
             e->update(deltaTime);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos);
