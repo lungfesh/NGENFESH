@@ -27,9 +27,9 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 float lastMouseX = windowWidth/2, lastMouseY = windowHeight/2;
 
 struct Camera {
-    glm::vec3 pos{0.0f};
-    glm::vec3 front{0.0f};
-    glm::vec3 up{0.0f};
+    glm::vec3 pos{0.0f, 0.0f, 0.0f};
+    glm::vec3 front{0.0f, 0.0f, 0.0f};
+    glm::vec3 up{0.0f, 1.0f, 0.0f};
 
     float yaw = 0.0f;
     float pitch = 0.0f;
@@ -41,12 +41,9 @@ struct Camera {
     }
 };
 
-Camera mainCamera {
-    .pos = glm::vec3(0.0f, 0.0f, 3.0f),
-    .front = glm::vec3(0.0f, 0.0f, -1.0f),
-    .up = glm::vec3(0.0f, 1.0f, 0.0f)
-};
+Camera mainCamera;
 
+// handle mouse movement, change pitch/yaw of mainCamera to match that of the mouse x and y offset
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     float xoffset = xpos - lastMouseX;
     float yoffset = lastMouseY - ypos;
@@ -67,8 +64,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
-bool fpsMovement = false;
-
 void processInput(GLFWwindow *window) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -77,16 +72,7 @@ void processInput(GLFWwindow *window) {
     lastFrame = currentFrame;
     float cameraSpeed = mainCamera.speed * deltaTime;
     glm::vec3 forward;
-
-
-    if (fpsMovement){
-        forward.x = cos(glm::radians(mainCamera.yaw));
-        forward.y = 0.0f;
-        forward.z = sin(glm::radians(mainCamera.yaw));
-        forward = glm::normalize(forward);
-    } else {
-        forward = mainCamera.front;
-    }
+    forward = mainCamera.front;
 
     glm::vec3 right = glm::normalize(glm::cross(mainCamera.front,mainCamera.up));
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -101,7 +87,7 @@ void processInput(GLFWwindow *window) {
 
 class Texture {
     public:
-        unsigned int texture; // make texture object
+        unsigned int texture = 0; // make texture object
         void init(std::string textureFile) {
             glGenTextures(1, &texture);
             glBindTexture(GL_TEXTURE_2D, texture);
@@ -144,12 +130,27 @@ class Texture {
             glBindTexture(GL_TEXTURE_2D, 0);
         }
 };
+// given two Elements, check if they collide using the AABB method
+// probably should use bounding points instead
+bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_corner2, glm::vec3 bounding_box_corner3, glm::vec3 bounding_box_corner4) { // c1 = min c2 = max
+    if (bounding_box_corner1.x < bounding_box_corner4.x &&
+        bounding_box_corner2.x > bounding_box_corner3.x &&
 
+        bounding_box_corner1.y < bounding_box_corner4.y &&
+        bounding_box_corner2.y > bounding_box_corner3.y &&
+        bounding_box_corner1.z < bounding_box_corner4.z &&
+        bounding_box_corner2.z > bounding_box_corner3.z
+    ) {
+        // std::cout << "Collision at " << glfwGetTime() << std::endl;
+        return true;
+    }
+    return false;
+}
 class Element {
     public:
-        bool RENDERXYZ = true, RENDERCOLOR = true, RENDERTEX = true, RENDERNORM = true;
-        unsigned int VAO, VBO, EBO;
-        glm::vec3 position;
+        unsigned int VAO = 0, VBO = 0, EBO = 0;
+        glm::vec3 position{0.0f};
+        glm::vec3 lastPosition{0.0f};
         glm::vec3 velocity;
         bool wireframe = false;
         GLenum draw_mode = GL_TRIANGLES;
@@ -163,6 +164,11 @@ class Element {
         Shader* shader = nullptr;
         glm::vec3 lightColor;
 
+        glm::vec3 bounding_box_corner1{-0.5}; // for a 1x1 unit cube
+        glm::vec3 bounding_box_corner2{0.5};
+
+        Element* debugElement = nullptr;
+        bool debug = false;
         Element() = default;
 
         void init() {
@@ -223,11 +229,26 @@ class Element {
         glm::vec3 rotation = glm::vec3(0.0f); // initial orientation
 
         float currentAngle = 0.0f; // to track rotation over time
-        void update(float deltaTime) { // deltaTime is how long since last frame and current (i think)
+        void update(float deltaTime, std::vector<Element*>& Objects) { // deltaTime is how long since last frame and current (i think)
             if (rotate) {
                 currentAngle += rotationSpeed * deltaTime;
                 if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
             }
+            if (lastPosition != position) {
+                for (size_t i = 0; i < Objects.size(); i++) {
+                    if (Objects[i] == this) {continue;}
+                    if (Objects[i]->debug == true) {continue;}
+                    if (Objects[i]->position == position) {continue;}
+                    if (AABBCollideDetect(position+bounding_box_corner1,
+                    position+bounding_box_corner2,
+                    Objects[i]->position+Objects[i]->bounding_box_corner1, 
+                    Objects[i]->position+Objects[i]->bounding_box_corner2)) {
+                        printf("Collision at %f, pos1: %f %f %f, pos2: %f %f %f\n", glfwGetTime(),Objects[i]->position.x, Objects[i]->position.y, Objects[i]->position.z, position.x, position.y, position.z);
+                    }
+                }
+            }
+            if (debugElement != nullptr) debugElement->position = position;
+            lastPosition = position;
         }
         
         glm::mat4 getMatrix() const {
@@ -252,7 +273,6 @@ class Element {
             // if (position.y >= -1.0f) {
                 // velocity.y += -9.8*dt;    
             // }
-            // velocity.y += -9.8*dt;
 
             position += velocity * dt; // apply velocity
 
@@ -274,25 +294,38 @@ class Element {
         }
 };
 
-// given position, go thru Element list and check if any Element is within 1u of position.
-// if true, calc dir from Element.pos + 1u to given position, then apply force to Element in the -direction
-void detectCollision(glm::vec3 position, std::vector<Element*> Objects) {
-    // yes, yes, yes, i know. it's called detect collisions but it applies some velocities and shit aswell. calm your tits
-    for (Element* e : Objects) {
-        if (position == e->position) continue; // skip over itself
-        glm::vec3 diff = position-e->position;
-        if (glm::length(diff) <= 1.0f) {
-            glm::vec3 direction = glm::normalize(diff);
 
-            e->velocity -= direction*2.0f;
+
+std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color = glm::vec3(1.0f,0.0f,0.0f)) {
+    std::vector<float> vertices;
+    for (int x = 0; x <= 1; ++x) {
+        for (int y = 0; y <= 1; ++y) {
+            for (int z = 0; z <= 1; ++z) {
+                vertices.push_back(x ? c1.x : c2.x);
+                vertices.push_back(y ? c1.y : c2.y);
+                vertices.push_back(z ? c1.z : c2.z);
+                vertices.push_back(color.r);
+                vertices.push_back(color.g);
+                vertices.push_back(color.b);
+                
+                // UV
+                vertices.push_back(0.0f);
+                vertices.push_back(0.0f);
+
+                // Normal
+                vertices.push_back(0.0f);
+                vertices.push_back(0.0f);
+                vertices.push_back(0.0f);
+            }
         }
-    } // holy terrible code
+    }
+    return vertices;
 }
 
 int main() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
     // init shit
     glfwInit();
@@ -300,7 +333,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(512,512, "Title", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(512,512, "NGENFESH", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create window\n";
         glfwTerminate();
@@ -317,7 +350,9 @@ int main() {
     // callbacks
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
+
     std::vector<Element*> Objects;
+
     Element quad;
     quad.vertices = {
 //      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
@@ -335,7 +370,7 @@ int main() {
     quad.useTexture = true;
     quad.textureFile = "textures/doomerfesh.png";
     quad.init();
-    Objects.push_back(&quad);
+    // Objects.push_back(&quad);
     
     Element cube;
     cube.vertices = {
@@ -370,10 +405,10 @@ int main() {
         -0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,      0.0f, -1.0f, 0.0f,
     
         // Top face (Y = +0.5)
-        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f,      0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,      0.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,      0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,      0.0f, 1.0f, 0.0f,
     };
     cube.indices = {
         0,  1,  2,   2,  3,  0,   // back
@@ -388,13 +423,27 @@ int main() {
     cube.useTexture = true;
     cube.rotate = true;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
-    cube.rotationSpeed = 1.0f;
+    cube.rotationSpeed = 5.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
     cube.textureFile = "textures/doomerfesh.png";
 
     cube.init();
     Objects.push_back(&cube);
     
+    Element cubeBB;
+    cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2);
+    cubeBB.indices = {
+    0,1,  1,3,  3,2,  2,0, // front face edges
+    4,5,  5,7,  7,6,  6,4, // back face edges
+    0,4,  1,5,  2,6,  3,7  // connecting edges
+    };
+    cubeBB.position = cube.position;
+    cubeBB.draw_mode = GL_LINES;
+    cubeBB.debug = true;
+    cubeBB.init();
+    Objects.push_back(&cubeBB);
+    cube.debugElement = &cubeBB;
+
     Element wall;
     wall.vertices = {
 //      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
@@ -417,7 +466,7 @@ int main() {
     wall.useTexture = true;
     wall.textureFile = "textures/doomerfesh.png";
     wall.init();
-    Objects.push_back(&wall);
+    // Objects.push_back(&wall);
 
     Element lightSource;
     lightSource.vertices = {
@@ -473,12 +522,13 @@ int main() {
 
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
+    Shader debugShader("shaders/object.vert", "shaders/solid.frag");
 
     wall.shader = &objectShader;
     lightSource.shader = &lightShader;
     cube.shader = &objectShader;
     quad.shader = &objectShader;
-
+    cubeBB.shader = &debugShader;
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     float dt = 1.0f/60.0f;
@@ -494,9 +544,7 @@ int main() {
         accumulator += deltaTime;
         while (accumulator >= dt) {
             for (Element* e : Objects) {
-                detectCollision(mainCamera.pos, Objects);
-                detectCollision(e->position, Objects);
-                e->physics_step(dt);
+                // e->physics_step(dt);
             }
             accumulator -= dt;    
         } 
@@ -515,10 +563,10 @@ int main() {
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
 
         for (Element* e : Objects) {
-            e->update(deltaTime);
+            e->update(deltaTime, Objects);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos);
         };
-
+        cube.position += glm::normalize(mainCamera.pos - cube.position)*0.01f;
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
