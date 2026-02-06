@@ -10,10 +10,11 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.hpp"
+#include "camera.hpp"
+#include "texture.hpp"
+#include "util.hpp"
 // #include "lighting.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 float windowWidth = 512.0f;
 float windowHeight = 512.0f;
@@ -26,20 +27,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 float lastMouseX = windowWidth/2, lastMouseY = windowHeight/2;
 
-struct Camera {
-    glm::vec3 pos{0.0f, 0.0f, 0.0f};
-    glm::vec3 front{0.0f, 0.0f, 0.0f};
-    glm::vec3 up{0.0f, 1.0f, 0.0f};
-
-    float yaw = 0.0f;
-    float pitch = 0.0f;
-    float speed = 5.0f;
-    float sensitivity = 0.1f;
-
-    glm::mat4 view() const {
-        return glm::lookAt(pos,pos+front,up);
-    }
-};
 
 // implemented fps style movement, cannot get freecam to work again
 bool fpsMovement = true;
@@ -68,67 +55,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
-class Texture {
-    public:
-        unsigned int texture = 0; // make texture object
-        void init(std::string textureFile) {
-            glGenTextures(1, &texture);
-            glBindTexture(GL_TEXTURE_2D, texture);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            int width, height, nrChannels;
-            unsigned char *data = stbi_load(textureFile.c_str(), &width, &height, &nrChannels, 0);
-            if (data)
-                {
-                    GLenum format;
-                if (nrChannels == 1) format = GL_RED;
-                else if (nrChannels == 3) format = GL_RGB;
-                else if (nrChannels == 4) format = GL_RGBA;
-                else {
-                    std::cout << "Unsupported texture format\n";
-                    stbi_image_free(data);
-                    return;
-                }
-
-                glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-                glGenerateMipmap(GL_TEXTURE_2D);
-            }
-            else
-            {
-                std::cout << "Failed to load texture" << std::endl;
-            }
-            stbi_image_free(data);
-        }
-        ~Texture() {
-            glDeleteTextures(1, &texture);
-        }
-
-        void use() const {
-            glBindTexture(GL_TEXTURE_2D, texture);
-        }
-        void unUse() const {
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
-};
-// given two Elements, check if they collide using the AABB method
-// probably should use bounding points instead
-bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_corner2, glm::vec3 bounding_box_corner3, glm::vec3 bounding_box_corner4) { // c1 = min c2 = max
-    if (bounding_box_corner1.x < bounding_box_corner4.x &&
-        bounding_box_corner2.x > bounding_box_corner3.x &&
-
-        bounding_box_corner1.y < bounding_box_corner4.y &&
-        bounding_box_corner2.y > bounding_box_corner3.y &&
-        bounding_box_corner1.z < bounding_box_corner4.z &&
-        bounding_box_corner2.z > bounding_box_corner3.z
-    ) {
-        // std::cout << "Collision at " << glfwGetTime() << std::endl;
-        return true;
-    }
-    return false;
-}
 class Element {
     public:
         unsigned int VAO = 0, VBO = 0, EBO = 0;
@@ -440,33 +366,6 @@ void processInput(GLFWwindow *window, Element* player) {
         }
 }
 
-
-std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color = glm::vec3(1.0f,0.0f,0.0f)) {
-    std::vector<float> vertices;
-    for (int x = 0; x <= 1; ++x) {
-        for (int y = 0; y <= 1; ++y) {
-            for (int z = 0; z <= 1; ++z) {
-                vertices.push_back(x ? c1.x : c2.x);
-                vertices.push_back(y ? c1.y : c2.y);
-                vertices.push_back(z ? c1.z : c2.z);
-                vertices.push_back(color.r);
-                vertices.push_back(color.g);
-                vertices.push_back(color.b);
-                
-                // UV
-                vertices.push_back(0.0f);
-                vertices.push_back(0.0f);
-
-                // Normal
-                vertices.push_back(0.0f);
-                vertices.push_back(0.0f);
-                vertices.push_back(0.0f);
-            }
-        }
-    }
-    return vertices;
-}
-
 int main() {
     // std::random_device rd;
     // std::mt19937 gen(rd());
@@ -652,7 +551,7 @@ int main() {
     square.position.x = 0.0f;
     square.position.y = 0.0f;
     square.init();
-    HUDObjects.push_back(&square);
+    // HUDObjects.push_back(&square);
 
     Shader hudShader("shaders/hud.vert", "shaders/hud.frag");
     square.shader = &hudShader;
