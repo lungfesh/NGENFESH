@@ -33,13 +33,16 @@ struct Camera {
 
     float yaw = 0.0f;
     float pitch = 0.0f;
-    float speed = 2.5f;
+    float speed = 5.0f;
     float sensitivity = 0.1f;
 
     glm::mat4 view() const {
         return glm::lookAt(pos,pos+front,up);
     }
 };
+
+// implemented fps style movement, cannot get freecam to work again
+bool fpsMovement = true;
 
 Camera mainCamera;
 
@@ -64,26 +67,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
-void processInput(GLFWwindow *window) {
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-    float currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
-    float cameraSpeed = mainCamera.speed * deltaTime;
-    glm::vec3 forward;
-    forward = mainCamera.front;
-
-    glm::vec3 right = glm::normalize(glm::cross(mainCamera.front,mainCamera.up));
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        mainCamera.pos += cameraSpeed * forward;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        mainCamera.pos -= cameraSpeed * forward;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        mainCamera.pos -= right * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        mainCamera.pos += right * cameraSpeed;
-}
 
 class Texture {
     public:
@@ -166,6 +149,8 @@ class Element {
 
         glm::vec3 bounding_box_corner1{-0.5}; // for a 1x1 unit cube
         glm::vec3 bounding_box_corner2{0.5};
+        bool affectedByGravity = false;
+        bool grounded = false;
 
         Element* debugElement = nullptr;
         bool debug = false;
@@ -268,6 +253,7 @@ class Element {
                     }
                 }
             }
+            grounded = (velocity.y == 0.0f ? true : false);
             if (debugElement != nullptr) debugElement->position = position;
             lastPosition = position;
         }
@@ -291,9 +277,9 @@ class Element {
         }
 
         void physics_step(float dt) {
-            // if (position.y >= -1.0f) {
-                // velocity.y += -9.8*dt;    
-            // }
+            if (affectedByGravity) {
+                velocity.y += -9.8*dt;    
+            }
 
             // now dampen so it doesn't fly forever
 
@@ -302,8 +288,13 @@ class Element {
                 glm::vec3 decel = glm::normalize(velocity) * damping * dt;
                 if (glm::length(decel) > glm::length(velocity))
                     velocity = glm::vec3(0.0f); // stop completely
-                else
-                    velocity -= decel;
+                else {
+                    if (affectedByGravity) velocity -= decel;
+                    else {
+                        velocity.x -= decel.x; // let gravity handle vel.y
+                        velocity.z -= decel.z;
+                    }
+                }
             }
             
             // some of the shit in Element::update should probably go in here
@@ -318,6 +309,49 @@ class Element {
         }
 };
 
+void processInput(GLFWwindow *window, Element* player) {
+    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+    float cameraSpeed = mainCamera.speed * deltaTime;
+    glm::vec3 right = glm::normalize(glm::cross(mainCamera.front,mainCamera.up));
+    if (fpsMovement) {
+        glm::vec3 forward = mainCamera.front;
+        forward.y = 0.0f;
+        if (glm::length(forward) > 0.0f)
+            forward = glm::normalize(forward);
+
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            player->velocity += cameraSpeed * forward;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            player->velocity -= cameraSpeed * forward;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            player->velocity -= right * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            player->velocity += right * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            if (!player->grounded) {return;}
+            player->velocity += 10.0f * mainCamera.up;
+        }
+    }
+    else {
+        glm::vec3 forward = mainCamera.front;
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            player->velocity += cameraSpeed * forward;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            player->velocity -= cameraSpeed * forward;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            player->velocity -= right * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            player->velocity += right * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            player->velocity += cameraSpeed * mainCamera.up;
+        }
+        }
+}
 
 
 std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color = glm::vec3(1.0f,0.0f,0.0f)) {
@@ -389,13 +423,29 @@ int main() {
         0, 1, 2,
         2, 3, 0
     };
+    quad.bounding_box_corner1 = glm::vec3(-5.0f,0.0f,-5.0f);
+    quad.bounding_box_corner2 = glm::vec3(5.0f,0.1f,5.0f);
     quad.position.x = 0.0f;
     quad.position.y = -1.0f;
     quad.useTexture = true;
     quad.textureFile = "textures/doomerfesh.png";
     quad.init();
-    // Objects.push_back(&quad);
+    Objects.push_back(&quad);
     
+    Element quadBB;
+    quadBB.vertices = calcBoundingBoxVerts(quad.bounding_box_corner1, quad.bounding_box_corner2);
+    quadBB.indices = {
+    0,1,  1,3,  3,2,  2,0, // front face edges
+    4,5,  5,7,  7,6,  6,4, // back face edges
+    0,4,  1,5,  2,6,  3,7  // connecting edges
+    };
+    quadBB.position = quad.position;
+    quadBB.draw_mode = GL_LINES;
+    quadBB.debug = true;
+    quadBB.init();
+    Objects.push_back(&quadBB);
+    quad.debugElement = &quadBB;
+
     Element cube;
     cube.vertices = {
         // Back face (Z = -0.5)
@@ -443,7 +493,7 @@ int main() {
         20, 21, 22,  22, 23, 20    // top
     };
     cube.position.x = 2.0f;
-    cube.position.y = -1.0f;
+    cube.position.y = 2.0f;
     cube.useTexture = true;
     cube.rotate = true;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
@@ -468,76 +518,19 @@ int main() {
     Objects.push_back(&cubeBB);
     cube.debugElement = &cubeBB;
 
-    Element wall;
-    wall.vertices = {
-//      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
-        -5.0f, 0.0f, -5.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 0
-        5.0f, 0.0f, -5.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 1
-        5.0f, 0.0f, 5.0f,    1.0f, 1.0f, 1.0f,   1.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 2
-        -5.0f, 0.0f, 5.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 3
-    };
-    wall.indices = {
-        0, 1, 2,
-        2, 3, 0
-    };
-    wall.position.x = 0.0f;
-    wall.position.y = 0.0f;
-    wall.position.z = -5.0f;
-    wall.rotate = true;
-    wall.rotation = glm::vec3(glm::radians(90.0f), glm::radians(0.0f), glm::radians(90.0f));
-    wall.rotateAxis = glm::vec3(1.0f,1.0f,1.0f);
-    wall.rotationSpeed = 1.0f;
-    wall.useTexture = true;
-    wall.textureFile = "textures/doomerfesh.png";
-    wall.init();
-    // Objects.push_back(&wall);
+    Element player;
+    // player.vertices = cube.vertices;
+    // player.indices = cube.indices;
+    player.position = mainCamera.pos;
+    player.useTexture = true;
+    player.textureFile = "textures/doomerfesh.png";
+    player.init();
+    Objects.push_back(&player);
+    player.affectedByGravity = true;
 
     Element lightSource;
-    lightSource.vertices = {
-        // Back face (Z = -0.5)
-        -0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-    
-        // Front face (Z = +0.5)
-        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-    
-        // Left face (X = -0.5)
-        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-    
-        // Right face (X = +0.5)
-         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-    
-        // Bottom face (Y = -0.5)
-        -0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-    
-        // Top face (Y = +0.5)
-        -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-    };
-    lightSource.indices = {
-        0,  1,  2,   2,  3,  0,   // back
-        4,  5,  6,   6,  7,  4,   // front
-        8,  9,  10,  10, 11, 8,   // left
-        12, 13, 14,  14, 15, 12,   // right
-        16, 17, 18,  18, 19, 16,   // bottom
-        20, 21, 22,  22, 23, 20    // top
-    };
+    lightSource.vertices = cube.vertices;
+    lightSource.indices = cube.indices;
     lightSource.position.x = 5.0f;
     lightSource.position.y = 1.0f;
     lightSource.position.z = 0.0f;
@@ -548,12 +541,15 @@ int main() {
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
     Shader debugShader("shaders/object.vert", "shaders/solid.frag");
 
-    wall.shader = &objectShader;
     lightSource.shader = &lightShader;
+    player.shader = &objectShader;
     cube.shader = &objectShader;
     quad.shader = &objectShader;
     cubeBB.shader = &debugShader;
+    quadBB.shader = &debugShader;
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
 
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
@@ -562,13 +558,15 @@ int main() {
     glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     while (!glfwWindowShouldClose(window)) {
-        processInput(window);
+        processInput(window, &player);
 
         // physics shit
-        cube.velocity = mainCamera.pos - cube.position;
+        // cube.velocity = mainCamera.pos - cube.position;
         
+        mainCamera.pos = player.position + cameraOffset;
         accumulator += deltaTime;
         while (accumulator >= dt) {
+            player.physics_step(dt);
             for (Element* e : Objects) {
                 e->physics_step(dt);
             }
