@@ -151,7 +151,7 @@ class Element {
         unsigned int VAO = 0, VBO = 0, EBO = 0;
         glm::vec3 position{0.0f};
         glm::vec3 lastPosition{0.0f};
-        glm::vec3 velocity;
+        glm::vec3 velocity{0.0f};
         bool wireframe = false;
         GLenum draw_mode = GL_TRIANGLES;
 
@@ -295,9 +295,8 @@ class Element {
                 // velocity.y += -9.8*dt;    
             // }
 
-            position += velocity * dt; // apply velocity
-
             // now dampen so it doesn't fly forever
+
             float damping = 2.0f; // units per second
             if (glm::length(velocity) > 0.0f) {
                 glm::vec3 decel = glm::normalize(velocity) * damping * dt;
@@ -306,6 +305,10 @@ class Element {
                 else
                     velocity -= decel;
             }
+            
+            // some of the shit in Element::update should probably go in here
+
+            position += velocity * dt; // apply velocity
         }
 
         ~Element() {
@@ -562,10 +565,12 @@ int main() {
         processInput(window);
 
         // physics shit
+        cube.velocity = mainCamera.pos - cube.position;
+        
         accumulator += deltaTime;
         while (accumulator >= dt) {
             for (Element* e : Objects) {
-                // e->physics_step(dt);
+                e->physics_step(dt);
             }
             accumulator -= dt;    
         } 
@@ -587,7 +592,6 @@ int main() {
             e->update(deltaTime, Objects);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos);
         };
-        cube.position += glm::normalize(mainCamera.pos - cube.position)*0.01f;
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
