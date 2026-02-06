@@ -238,12 +238,33 @@ class Element {
                 for (size_t i = 0; i < Objects.size(); i++) {
                     if (Objects[i] == this) {continue;}
                     if (Objects[i]->debug == true) {continue;}
-                    if (Objects[i]->position == position) {continue;}
+                    if (Objects[i]->position == position) {continue;} // oh the horrors
                     if (AABBCollideDetect(position+bounding_box_corner1,
                     position+bounding_box_corner2,
                     Objects[i]->position+Objects[i]->bounding_box_corner1, 
                     Objects[i]->position+Objects[i]->bounding_box_corner2)) {
-                        printf("Collision at %f, pos1: %f %f %f, pos2: %f %f %f\n", glfwGetTime(),Objects[i]->position.x, Objects[i]->position.y, Objects[i]->position.z, position.x, position.y, position.z);
+                        // printf("Collision at %f, pos1: %f %f %f, pos2: %f %f %f\n", glfwGetTime(),Objects[i]->position.x, Objects[i]->position.y, Objects[i]->position.z, position.x, position.y, position.z);
+                        float px = std::min(position.x+bounding_box_corner2.x, Objects[i]->position.x+Objects[i]->bounding_box_corner2.x) - std::max(position.x+bounding_box_corner1.x, Objects[i]->position.x+Objects[i]->bounding_box_corner1.x);
+                        float py = std::min(position.y+bounding_box_corner2.y, Objects[i]->position.y+Objects[i]->bounding_box_corner2.y) - std::max(position.y+bounding_box_corner1.y, Objects[i]->position.y+Objects[i]->bounding_box_corner1.y);
+                        float pz = std::min(position.z+bounding_box_corner2.z, Objects[i]->position.z+Objects[i]->bounding_box_corner2.z) - std::max(position.z+bounding_box_corner1.z, Objects[i]->position.z+Objects[i]->bounding_box_corner1.z);
+                        // thanks chatgpt
+                        // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
+                        // this should probably have it's own func
+                        if (px < py && px < pz) {
+                            float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
+                            position.x += px * dir;
+                            velocity.x = 0;
+                        }
+                        else if (py < pz) {
+                            float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
+                            position.y += py * dir;
+                            velocity.y = 0;
+                        }
+                        else {
+                            float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
+                            position.z += pz * dir;
+                            velocity.z = 0;
+                        }
                     }
                 }
             }
