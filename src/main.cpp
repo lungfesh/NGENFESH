@@ -309,6 +309,93 @@ class Element {
         }
 };
 
+class HUDElement {
+    public:
+        unsigned int VAO = 0, VBO = 0, EBO = 0;
+        glm::vec3 position{0.0f};
+        bool wireframe = false;
+        GLenum draw_mode = GL_TRIANGLES;
+
+        std::vector<float> vertices;
+        std::vector<unsigned int> indices;
+        std::string textureFile = "";
+        bool useTexture = false;
+        Texture texture;
+
+        Shader* shader = nullptr;
+        glm::vec3 lightColor;
+
+        HUDElement* debugElement = nullptr;
+        bool debug = false;
+        HUDElement() = default;
+
+        void init() {
+            if (useTexture)
+                texture.init(textureFile);
+            glGenVertexArrays(1, &VAO);
+            glBindVertexArray(VAO);
+
+            glGenBuffers(1, &VBO);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+            glGenBuffers(1, &EBO);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
+        
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3*sizeof(float)));
+            glEnableVertexAttribArray(1);
+        
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6*sizeof(float)));
+            glEnableVertexAttribArray(2);
+        };
+        void draw() const {
+            if (!shader) return;
+
+
+            shader->use();
+            shader->setBool("useTexture", getUseTexture());
+            if (wireframe)
+                glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+            if (useTexture)
+                texture.use();
+            glBindVertexArray(VAO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glDrawElements(draw_mode, indices.size(), GL_UNSIGNED_INT, 0);
+            if (wireframe)
+                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+            if (useTexture)
+                texture.unUse();
+        };
+
+        bool rotate = false;
+        glm::vec2 rotateAxis = glm::vec2(0.0f, 1.0f); // what axis(es) to apply rotation to
+        float rotationSpeed = 0.0f; // the speed at which we rotate
+        glm::vec2 pivot = glm::vec2(0.0f); // what point to rotate around
+        glm::vec2 rotation = glm::vec2(0.0f); // initial orientation
+
+        float currentAngle = 0.0f; // to track rotation over time
+        void update(float deltaTime) { // deltaTime is how long since last frame and current (i think)
+            if (rotate) {
+                currentAngle += rotationSpeed * deltaTime;
+                if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
+            }
+        }
+
+        bool getUseTexture() const {
+            return useTexture;
+        }
+
+        ~HUDElement() {
+            glDeleteVertexArrays(1, &VAO);
+            glDeleteBuffers(1, &VBO);
+            glDeleteBuffers(1, &EBO);
+        }
+};
+
 void processInput(GLFWwindow *window, Element* player) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -551,6 +638,25 @@ int main() {
 
     glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
 
+    std::vector<HUDElement*> HUDObjects;
+    HUDElement square;
+    square.vertices = {
+       -1.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+        0.5f,  1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+       -1.0f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
+        0.5f,  0.0f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f
+    };
+    square.indices = {
+        0,1,2, 2,1,3
+    };
+    square.position.x = 0.0f;
+    square.position.y = 0.0f;
+    square.init();
+    HUDObjects.push_back(&square);
+
+    Shader hudShader("shaders/hud.vert", "shaders/hud.frag");
+    square.shader = &hudShader;
+
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
 
@@ -589,6 +695,10 @@ int main() {
         for (Element* e : Objects) {
             e->update(deltaTime, Objects);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos);
+        };
+        for (HUDElement* e : HUDObjects) {
+            e->update(deltaTime);
+            e->draw();
         };
         glfwSwapBuffers(window);
         glfwPollEvents();
