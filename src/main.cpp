@@ -77,6 +77,7 @@ class Element {
         glm::vec3 bounding_box_corner2{0.5};
         bool affectedByGravity = false;
         bool grounded = false;
+        bool hasCollision = true;
 
         Element* debugElement = nullptr;
         bool debug = false;
@@ -116,7 +117,7 @@ class Element {
             shader->setMat4("view", view);
             shader->setMat4("projection", projection);
             shader->setMat4("model", getMatrix());
-            shader->setBool("useTexture", getUseTexture());
+            shader->setInt("useTexture", getUseTexture());
             shader->setVec3("lightColor", lightSource.lightColor);
             shader->setVec3("lightPos", glm::vec3(lightSource.position.x, lightSource.position.y, lightSource.position.z));
             shader->setVec3("viewPos", cameraPos);
@@ -145,7 +146,7 @@ class Element {
                 currentAngle += rotationSpeed * deltaTime;
                 if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
             }
-            if (lastPosition != position) {
+            if (lastPosition != position && (hasCollision)) {
                 for (size_t i = 0; i < Objects.size(); i++) {
                     if (Objects[i] == this) {continue;}
                     if (Objects[i]->debug == true) {continue;}
@@ -184,16 +185,16 @@ class Element {
             lastPosition = position;
         }
         
-        glm::mat4 getMatrix() const {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, position);
-            if (rotate) {
-                model = glm::translate(model, pivot);
-                model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
+        glm::mat4 getMatrix() const { // get model matrix
+            glm::mat4 model = glm::mat4(1.0f); // define 4x4 matrix
+            model = glm::translate(model, position); // add position translation to matrix
+            if (rotate) { // if we're rotating it
+                model = glm::translate(model, pivot); // translate first by pivot point
+                model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
                 model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
                 model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
-                model = glm::rotate(model, currentAngle, rotateAxis);
-                model = glm::translate(model, -pivot);
+                model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
+                model = glm::translate(model, -pivot); // translate by negative pivot point, no idea why we do this i think i stole this from somewhere
             }
             return model;
         }
@@ -215,7 +216,7 @@ class Element {
                 if (glm::length(decel) > glm::length(velocity))
                     velocity = glm::vec3(0.0f); // stop completely
                 else {
-                    if (affectedByGravity) velocity -= decel;
+                    if (!affectedByGravity) velocity -= decel;
                     else {
                         velocity.x -= decel.x; // let gravity handle vel.y
                         velocity.z -= decel.z;
@@ -280,10 +281,8 @@ class HUDElement {
         };
         void draw() const {
             if (!shader) return;
-
-
             shader->use();
-            shader->setBool("useTexture", getUseTexture());
+            shader->setInt("useTexture", getUseTexture());
             if (wireframe)
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
             if (useTexture)
@@ -395,6 +394,8 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
 
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
     std::vector<Element*> Objects;
 
     Element quad;
@@ -505,14 +506,29 @@ int main() {
     cube.debugElement = &cubeBB;
 
     Element player;
-    // player.vertices = cube.vertices;
-    // player.indices = cube.indices;
+    player.bounding_box_corner1 = glm::vec3(-0.5);
+    player.bounding_box_corner2 = glm::vec3(0.5f, 1.5f, 0.5f);
+    player.vertices = calcBoundingBoxVerts(player.bounding_box_corner1, player.bounding_box_corner2, glm::vec3(1.0f,1.0f,1.0f));
+    player.indices = {
+    0,1,  1,3,  3,2,  2,0, // front face edges
+    4,5,  5,7,  7,6,  6,4, // back face edges
+    0,4,  1,5,  2,6,  3,7  // connecting edges
+    };
     player.position = mainCamera.pos;
     player.useTexture = true;
     player.textureFile = "textures/doomerfesh.png";
+    player.draw_mode = GL_LINES;
+    player.debug = true;
     player.init();
     Objects.push_back(&player);
-    player.affectedByGravity = true;
+    // if (!fpsMovement){ // temp fix
+        // player.affectedByGravity = false;
+        // player.hasCollision = false;
+    // }
+    // else {
+        player.affectedByGravity = true;
+        player.hasCollision = true;
+    // }
 
     Element lightSource;
     lightSource.vertices = cube.vertices;
@@ -527,13 +543,16 @@ int main() {
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
     Shader debugShader("shaders/object.vert", "shaders/solid.frag");
 
-    lightSource.shader = &lightShader;
-    player.shader = &objectShader;
-    cube.shader = &objectShader;
-    quad.shader = &objectShader;
-    cubeBB.shader = &debugShader;
-    quadBB.shader = &debugShader;
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+    for (size_t i = 0; i<Objects.size();i++) {
+        if (Objects[i]->debug)
+            Objects[i]->shader = &debugShader;
+        else
+            Objects[i]->shader = &objectShader;
+    }
+
+    lightSource.shader = &lightShader;
 
     glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
 
