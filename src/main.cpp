@@ -75,8 +75,15 @@ class Element {
 
         glm::vec3 bounding_box_corner1{-0.5}; // for a 1x1 unit cube
         glm::vec3 bounding_box_corner2{0.5};
-        bool affectedByGravity = false;
-        bool grounded = false;
+
+        // PHYSICS
+        // by default: all has collision, all can have velocity
+        // if it hits another thing, it stops
+        // no bounce
+        bool anchored = false; // velocity does not affect element, cannot be moved
+        bool bounce = false;
+        float bounce_amount = 0.5f; // how much energy to lose, default at 50%
+        bool grounded = false; // only for player, check for if on ground and let player jump if so.
         bool hasCollision = true;
 
         Element* debugElement = nullptr;
@@ -109,7 +116,7 @@ class Element {
             glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8*sizeof(float)));
             glEnableVertexAttribArray(3);
         };
-        void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos) const {
+        void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
             if (!shader) return;
 
 
@@ -162,20 +169,41 @@ class Element {
                         // thanks chatgpt
                         // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
                         // this should probably have it's own func
-                        if (px < py && px < pz) {
-                            float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
-                            position.x += px * dir;
-                            velocity.x = 0;
-                        }
-                        else if (py < pz) {
-                            float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
-                            position.y += py * dir;
-                            velocity.y = 0;
-                        }
-                        else {
-                            float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
-                            position.z += pz * dir;
-                            velocity.z = 0;
+                        if (bounce) {
+                            if (px < py && px < pz) {
+                                float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
+                                position.x += px * dir;
+                                velocity.x = -velocity.x * bounce_amount;
+                                if (glm::abs(velocity.x) < 0.5f) velocity.x = 0.0f;
+                            }
+                            else if (py < pz) {
+                                float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
+                                position.y += py * dir;
+                                velocity.y = -velocity.y * bounce_amount;
+                                if (glm::abs(velocity.y) < 0.5f) velocity.y = 0.0f;
+                            }
+                            else {
+                                float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
+                                position.z += pz * dir;
+                                velocity.z = -velocity.z;
+                                if (glm::abs(velocity.z) < 0.5f) velocity.z = 0.0f;
+                            }
+                        } else {
+                            if (px < py && px < pz) {
+                                float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
+                                position.x += px * dir;
+                                velocity.x = 0;
+                            }
+                            else if (py < pz) {
+                                float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
+                                position.y += py * dir;
+                                velocity.y = 0;
+                            }
+                            else {
+                                float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
+                                position.z += pz * dir;
+                                velocity.z = 0;
+                            }
                         }
                     }
                 }
@@ -204,28 +232,22 @@ class Element {
         }
 
         void physics_step(float dt) {
-            if (affectedByGravity) {
-                velocity.y += -9.8*dt;    
-            }
+            if (anchored) return;
+            velocity.y += -9.8*dt;
 
             // now dampen so it doesn't fly forever
-
             float damping = 2.0f; // units per second
             if (glm::length(velocity) > 0.0f) {
                 glm::vec3 decel = glm::normalize(velocity) * damping * dt;
                 if (glm::length(decel) > glm::length(velocity))
                     velocity = glm::vec3(0.0f); // stop completely
                 else {
-                    if (!affectedByGravity) velocity -= decel;
-                    else {
-                        velocity.x -= decel.x; // let gravity handle vel.y
-                        velocity.z -= decel.z;
-                    }
+                    velocity -= decel;
                 }
             }
-            
-            // some of the shit in Element::update should probably go in here
-
+            if (glm::length(velocity) < 0.1f) {
+                velocity = glm::vec3(0.0f);
+            }
             position += velocity * dt; // apply velocity
         }
 
@@ -416,6 +438,7 @@ int main() {
     quad.position.y = -1.0f;
     quad.useTexture = true;
     quad.textureFile = "textures/doomerfesh.png";
+    quad.anchored = true;
     quad.init();
     Objects.push_back(&quad);
     
@@ -487,6 +510,7 @@ int main() {
     cube.rotationSpeed = 5.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
     cube.textureFile = "textures/doomerfesh.png";
+    cube.bounce = true;
 
     cube.init();
     Objects.push_back(&cube);
@@ -521,14 +545,8 @@ int main() {
     player.debug = true;
     player.init();
     Objects.push_back(&player);
-    // if (!fpsMovement){ // temp fix
-        // player.affectedByGravity = false;
-        // player.hasCollision = false;
-    // }
-    // else {
-        player.affectedByGravity = true;
-        player.hasCollision = true;
-    // }
+    player.anchored = false;
+    player.hasCollision = true;
 
     Element lightSource;
     lightSource.vertices = cube.vertices;
@@ -612,7 +630,7 @@ int main() {
 
         for (Element* e : Objects) {
             e->update(deltaTime, Objects);
-            e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos);
+            e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos, glfwGetTime());
         };
         for (HUDElement* e : HUDObjects) {
             e->update(deltaTime);
@@ -621,6 +639,7 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;
