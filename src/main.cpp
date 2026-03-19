@@ -170,39 +170,47 @@ class Element {
                         // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
                         // this should probably have it's own func
                         if (bounce) {
-                            if (px < py && px < pz) {
+                            if (px < py && px < pz) { // z axis has most overlap
                                 float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
                                 position.x += px * dir;
                                 velocity.x = -velocity.x * bounce_amount;
-                                if (glm::abs(velocity.x) < 0.5f) velocity.x = 0.0f;
+                                if (glm::abs(velocity.x) < 0.08f) velocity.x = 0.0f;
                             }
-                            else if (py < pz) {
+                            else if (py < pz) { // y axis has most overlap
                                 float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
                                 position.y += py * dir;
                                 velocity.y = -velocity.y * bounce_amount;
-                                if (glm::abs(velocity.y) < 0.5f) velocity.y = 0.0f;
+                                if (glm::abs(velocity.y) < 0.08f) velocity.y = 0.0f;
                             }
-                            else {
+                            else { // x axis overlap
                                 float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
                                 position.z += pz * dir;
                                 velocity.z = -velocity.z;
-                                if (glm::abs(velocity.z) < 0.5f) velocity.z = 0.0f;
+                                if (glm::abs(velocity.z) < 0.08f) velocity.z = 0.0f;
                             }
                         } else {
                             if (px < py && px < pz) {
                                 float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
+                                float tempf = Objects[i]->velocity.x;
                                 position.x += px * dir;
-                                velocity.x = 0;
+                                Objects[i]->velocity.x = velocity.x;
+                                velocity.x = -tempf;
                             }
                             else if (py < pz) {
                                 float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
+                                float tempf = Objects[i]->velocity.y;
                                 position.y += py * dir;
-                                velocity.y = 0;
+                                Objects[i]->velocity.y = velocity.y;
+                                velocity.y = -tempf;
                             }
                             else {
                                 float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
+                                float tempf = Objects[i]->velocity.z;
                                 position.z += pz * dir;
-                                velocity.z = 0;
+                                // velocity.z = Objects[i]->velocity.z;
+                                // Objects[i]->velocity.z = -tempf;
+                                Objects[i]->velocity.z = velocity.z;
+                                velocity.z = -tempf;
                             }
                         }
                     }
@@ -554,6 +562,10 @@ int main() {
     lightSource.position.x = 5.0f;
     lightSource.position.y = 1.0f;
     lightSource.position.z = 0.0f;
+    // lightSource.velocity.x = -5.0f;
+    lightSource.velocity.y = 10.0f;
+    // lightSource.velocity.z = 5.0f;
+    // lightSource.bounce = true;
     lightSource.init();
     Objects.push_back(&lightSource);
 
@@ -604,7 +616,9 @@ int main() {
 
         // physics shit
         // cube.velocity = mainCamera.pos - cube.position;
-        
+
+
+        printf("lightsource vel: %f %f %f\n", lightSource.velocity.x, lightSource.velocity.y, lightSource.velocity.z);
         mainCamera.pos = player.position + cameraOffset;
         accumulator += deltaTime;
         while (accumulator >= dt) {
