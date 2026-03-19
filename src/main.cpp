@@ -169,6 +169,7 @@ class Element {
                         // thanks chatgpt
                         // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
                         // this should probably have it's own func
+                        if (glm::length(velocity) == 0.0f) return;
                         if (bounce) {
                             if (px < py && px < pz) { // z axis has most overlap
                                 float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
@@ -194,14 +195,14 @@ class Element {
                                 float tempf = Objects[i]->velocity.x;
                                 position.x += px * dir;
                                 Objects[i]->velocity.x = velocity.x;
-                                velocity.x = -tempf;
+                                velocity.x = 0;
                             }
                             else if (py < pz) {
                                 float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
                                 float tempf = Objects[i]->velocity.y;
                                 position.y += py * dir;
                                 Objects[i]->velocity.y = velocity.y;
-                                velocity.y = -tempf;
+                                velocity.y = 0;
                             }
                             else {
                                 float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
@@ -210,7 +211,7 @@ class Element {
                                 // velocity.z = Objects[i]->velocity.z;
                                 // Objects[i]->velocity.z = -tempf;
                                 Objects[i]->velocity.z = velocity.z;
-                                velocity.z = -tempf;
+                                velocity.z = 0;
                             }
                         }
                     }
@@ -518,7 +519,7 @@ int main() {
     cube.rotationSpeed = 5.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
     cube.textureFile = "textures/doomerfesh.png";
-    cube.bounce = true;
+    cube.bounce = false;
 
     cube.init();
     Objects.push_back(&cube);
