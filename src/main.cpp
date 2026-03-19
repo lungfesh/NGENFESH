@@ -366,34 +366,41 @@ void processInput(GLFWwindow *window, Element* player) {
         if (glm::length(forward) > 0.0f)
             forward = glm::normalize(forward);
 
-
+        glm::vec3 moveDir = glm::vec3(0.0f);
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            player->velocity += cameraSpeed * forward;
+            moveDir += forward;
+            // player->velocity += cameraSpeed * forward;
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            player->velocity -= cameraSpeed * forward;
+            moveDir -= forward;
+            // player->velocity -= cameraSpeed * forward;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            player->velocity -= right * cameraSpeed;
+            moveDir -= right;
+            // player->velocity -= right * cameraSpeed;
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            player->velocity += right * cameraSpeed;
+            moveDir += right;
+            // player->velocity += right * cameraSpeed;
+        player->velocity.x = moveDir.x * cameraSpeed;
+        player->velocity.z = moveDir.z * cameraSpeed;
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
             if (!player->grounded) {return;}
-            player->velocity += 10.0f * mainCamera.up;
+            player->velocity.y = 10.0f;
+            // player->velocity += 10.0f * mainCamera.up;
         }
     }
-    else {
+    else { // freecam, broken
         glm::vec3 forward = mainCamera.front;
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            player->velocity += cameraSpeed * forward;
+            player->position += cameraSpeed * forward;
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            player->velocity -= cameraSpeed * forward;
+            player->position -= cameraSpeed * forward;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            player->velocity -= right * cameraSpeed;
+            player->position -= forward * cameraSpeed;
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            player->velocity += right * cameraSpeed;
+            player->position += forward * cameraSpeed;
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            player->velocity += cameraSpeed * mainCamera.up;
+            player->position += cameraSpeed * mainCamera.up;
         }
-        }
+    }
 }
 
 int main() {
