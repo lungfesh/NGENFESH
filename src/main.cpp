@@ -14,7 +14,7 @@
 #include "texture.hpp"
 #include "util.hpp"
 #include "element.hpp"
-
+#include "premade_elements.hpp"
 
 float windowWidth = 512.0f;
 float windowHeight = 512.0f;
@@ -26,10 +26,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 } // called each time window is resized, and sets viewport size
 
 float lastMouseX = windowWidth/2, lastMouseY = windowHeight/2;
-
-
-// implemented fps style movement, cannot get freecam to work again
-bool fpsMovement = true;
 
 Camera mainCamera;
 
@@ -64,62 +60,29 @@ void processInput(GLFWwindow *window, Element* player) {
     lastFrame = currentFrame;
     float cameraSpeed = mainCamera.speed * deltaTime;
     glm::vec3 right = glm::normalize(glm::cross(mainCamera.front,mainCamera.up));
-    if (fpsMovement) {
-        glm::vec3 forward = mainCamera.front;
-        forward.y = 0.0f;
-        if (glm::length(forward) > 0.0f)
-            forward = glm::normalize(forward);
+    glm::vec3 forward = mainCamera.front;
+    forward.y = 0.0f;
+    if (glm::length(forward) > 0.0f)
+        forward = glm::normalize(forward);
 
-        glm::vec3 moveDir = glm::vec3(0.0f);
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            moveDir += forward;
-            // player->velocity += cameraSpeed * forward;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            moveDir -= forward;
-            // player->velocity -= cameraSpeed * forward;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            moveDir -= right;
-            // player->velocity -= right * cameraSpeed;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            moveDir += right;
-            // player->velocity += right * cameraSpeed;
-        player->velocity.x = moveDir.x * cameraSpeed;
-        player->velocity.z = moveDir.z * cameraSpeed;
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            if (!player->grounded) {return;}
-            player->velocity.y = 10.0f;
-        }
+    glm::vec3 moveDir = glm::vec3(0.0f);
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // 0
+        moveDir += forward;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        moveDir -= forward;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        moveDir -= right;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        moveDir += right;
+    player->velocity.x = moveDir.x * cameraSpeed;
+    player->velocity.z = moveDir.z * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (!player->grounded) {return;}
+        player->velocity.y = 10.0f;
     }
-    else { // freecam, broken
-        glm::vec3 forward = mainCamera.front;
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            player->position += cameraSpeed * forward;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            player->position -= cameraSpeed * forward;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            player->position -= forward * cameraSpeed;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            player->position += forward * cameraSpeed;
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            player->position += cameraSpeed * mainCamera.up;
-        }
-    }
-
-    // if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
-    //     glm::vec3 shootDir = mainCamera.front;
-    //     glm
-
-    //     std::cout << "shoot" << std::endl;
-    // }
-
 }
 
-int main() {
-    // std::random_device rd;
-    // std::mt19937 gen(rd());
-    // std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-
-    // init shit
+GLFWwindow* initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
@@ -129,13 +92,13 @@ int main() {
     if (window == NULL) {
         std::cout << "Failed to create window\n";
         glfwTerminate();
-        return -1;
+        return NULL;
     }
     glfwMakeContextCurrent(window);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initalize GLAD\n";
-        return -1;
+        return NULL;
     }
 
     glViewport(0, 0, 512, 512);
@@ -143,22 +106,26 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
 
-    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    return window;
+}
 
-    std::vector<Element*> Objects;
+int main() {
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
+    GLFWwindow* window = initWindow();
+    if (window == NULL) {
+        std::cerr << "Error creating window! Closing..";
+        return -1;
+    }
+    std::vector<Element*> Objects; // create Objects list
+
+    // start creating objects
     Element quad;
-    quad.vertices = {
-//      X      Y      Z       R     G     B      TEXCOORDS     NX     NY    NZ
-        -5.0f, 0.0f, -5.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 0
-        5.0f, 0.0f, -5.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f,   0.0f, 1.0f, 0.0f,// 1
-        5.0f, 0.0f, 5.0f,    1.0f, 1.0f, 1.0f,   1.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 2
-        -5.0f, 0.0f, 5.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f,   0.0f, 1.0f, 0.0f,// 3
-    };
-    quad.indices = {
-        0, 1, 2,
-        2, 3, 0
-    };
+    quad.vertices = {QUAD_VERTICES};
+    quad.indices = {QUAD_INDICES};
+
     quad.bounding_box_corner1 = glm::vec3(-5.0f,0.0f,-5.0f);
     quad.bounding_box_corner2 = glm::vec3(5.0f,0.1f,5.0f);
     quad.position.x = 0.0f;
@@ -166,6 +133,9 @@ int main() {
     quad.useTexture = true;
     quad.textureFile = "textures/doomerfesh.png";
     quad.anchored = true;
+    quad.sizex = 5.0f;
+    quad.sizey = 1.0f;
+    quad.sizez = 5.0f;
     quad.init();
     Objects.push_back(&quad);
     
@@ -184,52 +154,8 @@ int main() {
     quad.debugElement = &quadBB;
 
     Element cube;
-    cube.vertices = {
-//      X      Y      Z         R     G     B       UV             NX    NY     NZ
-        // Back face (Z = -0.5)
-        -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,   1.0f, 1.0f,    0.0f, 0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,    0.0f, 1.0f, 0.0f,   1.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,    0.0f, 0.0f, 1.0f,   0.0f, 0.0f,    0.0f, 0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,   0.0f, 1.0f,    0.0f, 0.0f, -1.0f,
-    
-        // Front face (Z = +0.5)
-        -0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,     0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,     0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,     0.0f,  0.0f,  1.0f,
-    
-        // Left face (X = -0.5)
-        -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,     -1.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,     -1.0f, 0.0f, 0.0f,
-    
-        // Right face (X = +0.5)
-         0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 1.0f,   1.0f, 1.0f,      1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 1.0f,   1.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 1.0f,   0.0f, 1.0f,      1.0f, 0.0f, 0.0f,
-    
-        // Bottom face (Y = -0.5)
-        -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,      0.0f, -1.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,      0.0f, -1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,      0.0f, -1.0f, 0.0f,
-    
-        // Top face (Y = +0.5)
-        -0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,      0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,      0.0f, 1.0f, 0.0f,
-    };
-    cube.indices = {
-        0,  1,  2,   2,  3,  0,   // back
-        4,  5,  6,   6,  7,  4,   // front
-        8,  9,  10,  10, 11, 8,   // left
-        12, 13, 14,  14, 15, 12,   // right
-        16, 17, 18,  18, 19, 16,   // bottom
-        20, 21, 22,  22, 23, 20    // top
-    };
+    cube.vertices = {CUBE_VERTICES};
+    cube.indices = {CUBE_INDICES};
     cube.position.x = 2.0f;
     cube.position.y = 2.0f;
     cube.useTexture = true;
@@ -245,11 +171,7 @@ int main() {
     
     Element cubeBB;
     cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2);
-    cubeBB.indices = {
-    0,1,  1,3,  3,2,  2,0, // front face edges
-    4,5,  5,7,  7,6,  6,4, // back face edges
-    0,4,  1,5,  2,6,  3,7  // connecting edges
-    };
+    cubeBB.indices = {CUBEBB_INDICES};
     cubeBB.position = cube.position;
     cubeBB.draw_mode = GL_LINES;
     cubeBB.debug = true;
@@ -260,12 +182,9 @@ int main() {
     Element player;
     player.bounding_box_corner1 = glm::vec3(-0.5);
     player.bounding_box_corner2 = glm::vec3(0.5f, 1.5f, 0.5f);
-    player.vertices = calcBoundingBoxVerts(player.bounding_box_corner1, player.bounding_box_corner2, glm::vec3(1.0f,1.0f,1.0f));
-    player.indices = {
-    0,1,  1,3,  3,2,  2,0, // front face edges
-    4,5,  5,7,  7,6,  6,4, // back face edges
-    0,4,  1,5,  2,6,  3,7  // connecting edges
-    };
+    player.vertices = calcBoundingBoxVerts(player.bounding_box_corner1, player.bounding_box_corner2, glm::vec3(1.0f));
+    player.indices = {CUBEBB_INDICES};
+
     player.position = mainCamera.pos;
     player.useTexture = true;
     player.textureFile = "textures/doomerfesh.png";
@@ -275,6 +194,7 @@ int main() {
     Objects.push_back(&player);
     player.anchored = false;
     player.hasCollision = true;
+    player.isPlayer = true;
 
     Element lightSource;
     lightSource.vertices = cube.vertices;
@@ -282,19 +202,23 @@ int main() {
     lightSource.position.x = 5.0f;
     lightSource.position.y = 1.0f;
     lightSource.position.z = 0.0f;
-    // lightSource.velocity.x = -5.0f;
-    lightSource.velocity.y = 10.0f;
-    // lightSource.velocity.z = 5.0f;
-    // lightSource.bounce = true;
     lightSource.init();
     Objects.push_back(&lightSource);
 
+    Element lightSource2 = Element(lightSource);
+    lightSource2.position.z = 2.0f;
+    lightSource2.init();
+    Objects.push_back(&lightSource2);
+
+    // create shaders
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
     Shader debugShader("shaders/object.vert", "shaders/solid.frag");
 
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    lightSource2.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
+    // apply shaders
     for (size_t i = 0; i<Objects.size();i++) {
         if (Objects[i]->debug)
             Objects[i]->shader = &debugShader;
@@ -303,42 +227,21 @@ int main() {
     }
 
     lightSource.shader = &lightShader;
+    lightSource2.shader = &lightShader;
 
     glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
 
-    std::vector<HUDElement*> HUDObjects;
-    HUDElement square;
-    square.vertices = {
-       -1.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-        0.5f,  1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-       -1.0f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
-        0.5f,  0.0f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f
-    };
-    square.indices = {
-        0,1,2, 2,1,3
-    };
-    square.position.x = 0.0f;
-    square.position.y = 0.0f;
-    square.init();
-    // HUDObjects.push_back(&square);
-
-    Shader hudShader("shaders/hud.vert", "shaders/hud.frag");
-    square.shader = &hudShader;
+    // Shader hudShader("shaders/hud.vert", "shaders/hud.frag");
+    // square.shader = &hudShader;
 
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
 
     glEnable(GL_DEPTH_TEST);
-    glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     while (!glfwWindowShouldClose(window)) {
         processInput(window, &player);
 
-        // physics shit
-        // cube.velocity = mainCamera.pos - cube.position;
-
-
-        // printf("lightsource vel: %f %f %f\n", lightSource.velocity.x, lightSource.velocity.y, lightSource.velocity.z);
         mainCamera.pos = player.position + cameraOffset;
         accumulator += deltaTime;
         while (accumulator >= dt) {
@@ -366,10 +269,10 @@ int main() {
             e->update(deltaTime, Objects);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos, glfwGetTime());
         };
-        for (HUDElement* e : HUDObjects) {
-            e->update(deltaTime);
-            e->draw();
-        };
+        // for (HUDElement* e : HUDObjects) {
+            // e->update(deltaTime);
+            // e->draw();
+        // };
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

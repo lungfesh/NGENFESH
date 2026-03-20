@@ -17,6 +17,11 @@
 void Element::init() {
     if (useTexture)
         texture.init(textureFile);
+    for (size_t i = 0; i < vertices.size() / 11; i++) {
+        vertices[i*11 + 0] *= sizex;
+        vertices[i*11 + 1] *= sizey;
+        vertices[i*11 + 2] *= sizez;
+    }
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
@@ -108,22 +113,17 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                     } else {
                     if (px < py && px < pz) {
                         float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
-                        float tempf = Objects[i]->velocity.x;
                         position.x += px * dir;
                         Objects[i]->velocity.x = velocity.x;
                         velocity.x = 0;
                     } else if (py < pz) {
                         float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
-                        float tempf = Objects[i]->velocity.y;
                         position.y += py * dir;
                         Objects[i]->velocity.y = velocity.y;
                         velocity.y = 0;
                     } else {
                         float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
-                        float tempf = Objects[i]->velocity.z;
                         position.z += pz * dir;
-                        // velocity.z = Objects[i]->velocity.z;
-                        // Objects[i]->velocity.z = -tempf;
                         Objects[i]->velocity.z = velocity.z;
                         velocity.z = 0;
                     }

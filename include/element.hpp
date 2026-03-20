@@ -14,6 +14,8 @@
 
 #include "texture.hpp"
 #include "shader.hpp"
+#include "camera.hpp"
+
 class Element {
     public:
         unsigned int VAO = 0, VBO = 0, EBO = 0;
@@ -34,6 +36,12 @@ class Element {
 
         glm::vec3 bounding_box_corner1{-0.5}; // for a 1x1 unit cube
         glm::vec3 bounding_box_corner2{0.5};
+        
+        float sizex = 1.0f;
+        float sizey = 1.0f;
+        float sizez = 1.0f;
+
+        Camera attachedCamera;
 
         // PHYSICS
         // by default: all has collision, all can have velocity
@@ -48,6 +56,8 @@ class Element {
         Element* debugElement = nullptr;
         bool debug = false;
         Element() = default;
+
+        bool isPlayer = false;
 
         bool rotate = false;
         glm::vec3 rotateAxis = glm::vec3(0.0f, 1.0f, 0.0f); // what axis(es) to apply rotation to
