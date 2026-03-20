@@ -1,5 +1,6 @@
 #include <glm/glm.hpp>
 #include "util.hpp"
+#include "element.hpp"
 
 // given 2 bounding boxes, check if they collide using the AABB method
 bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_corner2, glm::vec3 bounding_box_corner3, glm::vec3 bounding_box_corner4) { // c1 = min c2 = max
@@ -16,6 +17,11 @@ bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_co
     }
     return false;
 }
+
+// // given origin, direction, loop thru Element list and check if it hit anything and return where it hit
+// glm::vec3 castRay(glm::vec3 origin, glm::vec3 direction, std::vector<Element*> Objects) {
+
+// }
 
 std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color) {
     std::vector<float> vertices;
