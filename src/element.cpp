@@ -17,11 +17,6 @@
 void Element::init() {
     if (useTexture)
         texture.init(textureFile);
-    for (size_t i = 0; i < vertices.size() / 11; i++) {
-        vertices[i*11 + 0] *= sizex;
-        vertices[i*11 + 1] *= sizey;
-        vertices[i*11 + 2] *= sizez;
-    }
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
@@ -33,17 +28,31 @@ void Element::init() {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-        
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3*sizeof(float)));
-    glEnableVertexAttribArray(1);
-        
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6*sizeof(float)));
-    glEnableVertexAttribArray(2);
+    if (!debug) {
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8*sizeof(float)));
-    glEnableVertexAttribArray(3);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3*sizeof(float)));
+        glEnableVertexAttribArray(1);
+
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6*sizeof(float)));
+        glEnableVertexAttribArray(2);
+
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8*sizeof(float)));
+        glEnableVertexAttribArray(3);
+    } else {
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
+        glEnableVertexAttribArray(1);
+
+        // glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(6*sizeof(float)));
+        // glEnableVertexAttribArray(2);
+
+        // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(8*sizeof(float)));
+        // glEnableVertexAttribArray(3);
+    }
 };
 void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
     if (!shader) return;
@@ -70,6 +79,8 @@ void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& 
         texture.unUse();
 };
 void Element::update(float deltaTime, std::vector<Element*>& Objects) { // deltaTime is how long since last frame and current (i think)
+    if (debugElement != nullptr)
+        debugElement->position = position;
     if (rotate) {
         currentAngle += rotationSpeed * deltaTime;
         if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
@@ -77,7 +88,7 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
     if (lastPosition != position && (hasCollision)) {
         for (size_t i = 0; i < Objects.size(); i++) {
             if (Objects[i] == this) {continue;}
-            if (Objects[i]->debug == true) {continue;}
+            if (Objects[i]->debug == true) {continue;} // do not collide with debug elements
             if (Objects[i]->position == position) {continue;} // oh the horrors
             if (AABBCollideDetect(position+bounding_box_corner1,
                 position+bounding_box_corner2,
@@ -90,7 +101,7 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                 // thanks chatgpt
                 // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
                 // this should probably have it's own func
-                if (glm::length(velocity) == 0.0f) return;
+                // if (glm::length(velocity) == 0.0f) return;
                 if (bounce) {
                     if (px < py && px < pz) { // z axis has most overlap
                         float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
@@ -131,54 +142,68 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
             }
         }
     }
-    grounded = (velocity.y == 0.0f ? true : false);
-    if (debugElement != nullptr) debugElement->position = position;
+    // check if element is grounded (on top of another object)
+    float epsilon = 0.01f; // small tolerance
+    float groundRayLength = bounding_box_corner1.y - position.y;
+    groundRay = castRay(position, glm::vec3(0.0f, -1.0f, 0.0f), groundRayLength, Objects);
+
+    if (!glm::isnan(groundRay.y)) {
+        float bottomY = position.y + bounding_box_corner1.y;
+        grounded = (bottomY - groundRay.y) <= epsilon;
+    } else {
+        grounded = false;
+    }
+    
     lastPosition = position;
+    if (isPlayer) {
+        printf("%f %f %f\n", position.x, position.y, position.z);
+    }
 }
         
-        glm::mat4 Element::getMatrix() const { // get model matrix
-            glm::mat4 model = glm::mat4(1.0f); // define 4x4 matrix
-            model = glm::translate(model, position); // add position translation to matrix
-            if (rotate) { // if we're rotating it
-                model = glm::translate(model, pivot); // translate first by pivot point
-                model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
-                model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
-                model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
-                model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
-                model = glm::translate(model, -pivot); // translate by negative pivot point, no idea why we do this i think i stole this from somewhere
-            }
-            return model;
-        }
+glm::mat4 Element::getMatrix() const { // get model matrix
+    glm::mat4 model = glm::mat4(1.0f); // define 4x4 matrix
+    model = glm::translate(model, position); // add position translation to matrix
+    model = glm::scale(model, glm::vec3(sizex, sizey, sizez));
+    if (rotate) { // if we're rotating it
+        model = glm::translate(model, pivot); // translate first by pivot point
+        model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
+        model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
+        model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
+        model = glm::translate(model, -pivot); // translate by negative pivot point, no idea why we do this i think i stole this from somewhere
+    }
+    return model;
+}
 
-        bool Element::getUseTexture() const {
-            return useTexture;
-        }
+bool Element::getUseTexture() const {
+    return useTexture;
+}
 
-        void Element::physics_step(float dt) {
-            if (anchored) return;
-            velocity.y += -9.8*dt;
+void Element::physics_step(float dt) {
+        if (anchored) return;
+        velocity.y += -9.8*dt;
 
-            // now dampen so it doesn't fly forever
-            float damping = 2.0f; // units per second
-            if (glm::length(velocity) > 0.0f) {
-                glm::vec3 decel = glm::normalize(velocity) * damping * dt;
-                if (glm::length(decel) > glm::length(velocity))
-                    velocity = glm::vec3(0.0f); // stop completely
-                else {
-                    velocity -= decel;
-                }
-            }
-            if (glm::length(velocity) < 0.1f) {
-                velocity = glm::vec3(0.0f);
-            }
-            position += velocity * dt; // apply velocity
+    // now dampen so it doesn't fly forever
+    float damping = 2.0f; // units per second
+    if (glm::length(velocity) > 0.0f) {
+        glm::vec3 decel = glm::normalize(velocity) * damping * dt;
+        if (glm::length(decel) > glm::length(velocity))
+            velocity = glm::vec3(0.0f); // stop completely
+        else {
+            velocity -= decel;
         }
+    }
+    if (glm::length(velocity) < 0.1f) {
+        velocity = glm::vec3(0.0f);
+    }
+    position += velocity * dt; // apply velocity
+}
 
-        Element::~Element() {
-            glDeleteVertexArrays(1, &VAO);
-            glDeleteBuffers(1, &VBO);
-            glDeleteBuffers(1, &EBO);
-        }
+Element::~Element() {
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+}
 
 
 void HUDElement::init() {

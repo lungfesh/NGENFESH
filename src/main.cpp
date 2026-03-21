@@ -78,6 +78,7 @@ void processInput(GLFWwindow *window, Element* player) {
     player->velocity.z = moveDir.z * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
         if (!player->grounded) {return;}
+        // if (player->velocity.y > 0.0f) {return;}
         player->velocity.y = 10.0f;
     }
 }
@@ -126,70 +127,94 @@ int main() {
     quad.vertices = {QUAD_VERTICES};
     quad.indices = {QUAD_INDICES};
 
-    quad.bounding_box_corner1 = glm::vec3(-5.0f,0.0f,-5.0f);
-    quad.bounding_box_corner2 = glm::vec3(5.0f,0.1f,5.0f);
+    quad.bounding_box_corner1 = glm::vec3(-20.0f,0.0f,-20.0f);
+    quad.bounding_box_corner2 = glm::vec3(20.0f,0.1f,20.0f);
     quad.position.x = 0.0f;
     quad.position.y = -1.0f;
     quad.useTexture = true;
-    quad.textureFile = "textures/doomerfesh.png";
+    quad.textureFile = "textures/grass.jpg";
     quad.anchored = true;
-    quad.sizex = 5.0f;
+    quad.sizex = 20.0f;
     quad.sizey = 1.0f;
-    quad.sizez = 5.0f;
+    quad.sizez = 20.0f;
     quad.init();
     Objects.push_back(&quad);
-    
-    Element quadBB;
-    quadBB.vertices = calcBoundingBoxVerts(quad.bounding_box_corner1, quad.bounding_box_corner2);
-    quadBB.indices = {
-    0,1,  1,3,  3,2,  2,0, // front face edges
-    4,5,  5,7,  7,6,  6,4, // back face edges
-    0,4,  1,5,  2,6,  3,7  // connecting edges
-    };
-    quadBB.position = quad.position;
-    quadBB.draw_mode = GL_LINES;
-    quadBB.debug = true;
-    quadBB.init();
-    Objects.push_back(&quadBB);
-    quad.debugElement = &quadBB;
+
+    Element skybox1;
+    skybox1.vertices = {QUAD_VERTICES};
+    skybox1.indices = {QUAD_INDICES};
+    skybox1.useTexture = true;
+    skybox1.textureFile = "textures/sky.jpeg";
+    skybox1.hasCollision = false;
+    skybox1.anchored = true;
+    skybox1.sizex = 20.0f;
+    skybox1.sizey = 1.0f;
+    skybox1.sizez = 20.0f;
+    skybox1.position.x = 0.0f;
+    skybox1.position.y = 20.0f;
+    skybox1.init();
+    Objects.push_back(&skybox1);
 
     Element cube;
     cube.vertices = {CUBE_VERTICES};
     cube.indices = {CUBE_INDICES};
-    cube.position.x = 2.0f;
-    cube.position.y = 2.0f;
+    cube.bounding_box_corner1 = glm::vec3(-0.5f, -0.5f, -0.5f);
+    cube.bounding_box_corner1 = glm::vec3(0.5f, 0.5f, 0.5f);
+    cube.position.x = 5.0f;
+    cube.position.y = 5.0f;
     cube.useTexture = true;
     cube.rotate = true;
     cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
     cube.rotationSpeed = 5.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
     cube.textureFile = "textures/doomerfesh.png";
-    cube.bounce = false;
+    // cube.bounce = true;
+    // cube.bounce_amount = .75f;
+    cube.anchored = true;
 
     cube.init();
     Objects.push_back(&cube);
     
-    Element cubeBB;
-    cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2);
-    cubeBB.indices = {CUBEBB_INDICES};
-    cubeBB.position = cube.position;
-    cubeBB.draw_mode = GL_LINES;
-    cubeBB.debug = true;
-    cubeBB.init();
-    Objects.push_back(&cubeBB);
-    cube.debugElement = &cubeBB;
+    // Element cubeBB;
+    // // cubeBB.debug = true;
+    // cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2, glm::vec3(1.0f,1.0f,1.0f));
+    // cubeBB.indices = {CUBEBB_INDICES};
+    // cubeBB.position = cube.position;
+    // // cubeBB.draw_mode = GL_LINES;
+    // cubeBB.init();
+    // Objects.push_back(&cubeBB);
+    // cube.debugElement = &cubeBB;
 
     Element player;
+    player.wireframe = true;
+    // player.vertices = {CUBE_VERTICES};
+    player.position = glm::vec3(0.0f,5.0f,0.0f);
     player.bounding_box_corner1 = glm::vec3(-0.5);
     player.bounding_box_corner2 = glm::vec3(0.5f, 1.5f, 0.5f);
-    player.vertices = calcBoundingBoxVerts(player.bounding_box_corner1, player.bounding_box_corner2, glm::vec3(1.0f));
-    player.indices = {CUBEBB_INDICES};
+    player.vertices = calcBoundingBoxVerts(player.bounding_box_corner1, player.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f));
+    // player.vertices = {CUBE_VERTICES};
+    player.indices = {    0, 1, 2,
+    2, 3, 0,
 
-    player.position = mainCamera.pos;
-    player.useTexture = true;
-    player.textureFile = "textures/doomerfesh.png";
-    player.draw_mode = GL_LINES;
-    player.debug = true;
+    // Top face
+    4, 5, 6,
+    6, 7, 4,
+
+    // Front face (minZ)
+    0, 1, 5,
+    5, 4, 0,
+
+    // Back face (maxZ)
+    3, 2, 6,
+    6, 7, 3,
+
+    // Left face (minX)
+    0, 3, 7,
+    7, 4, 0,
+
+    // Right face (maxX)
+    1, 2, 6,
+    6, 5, 1};
     player.init();
     Objects.push_back(&player);
     player.anchored = false;
@@ -205,18 +230,12 @@ int main() {
     lightSource.init();
     Objects.push_back(&lightSource);
 
-    Element lightSource2 = Element(lightSource);
-    lightSource2.position.z = 2.0f;
-    lightSource2.init();
-    Objects.push_back(&lightSource2);
-
     // create shaders
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
     Shader lightShader("shaders/light.vert", "shaders/light.frag");
-    Shader debugShader("shaders/object.vert", "shaders/solid.frag");
+    Shader debugShader("shaders/debug.vert", "shaders/debug.frag");
 
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    lightSource2.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     // apply shaders
     for (size_t i = 0; i<Objects.size();i++) {
@@ -225,9 +244,7 @@ int main() {
         else
             Objects[i]->shader = &objectShader;
     }
-
     lightSource.shader = &lightShader;
-    lightSource2.shader = &lightShader;
 
     glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
 
@@ -245,7 +262,7 @@ int main() {
         mainCamera.pos = player.position + cameraOffset;
         accumulator += deltaTime;
         while (accumulator >= dt) {
-            player.physics_step(dt);
+            // player.physics_step(dt);
             for (Element* e : Objects) {
                 e->physics_step(dt);
             }
@@ -267,6 +284,7 @@ int main() {
 
         for (Element* e : Objects) {
             e->update(deltaTime, Objects);
+            // drawDebugLine(e->position, e->groundRay, glm::vec3(1.0f), debugShader, mainCamera.view(), projection);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos, glfwGetTime());
         };
         // for (HUDElement* e : HUDObjects) {

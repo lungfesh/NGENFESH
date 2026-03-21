@@ -40,6 +40,7 @@ class Element {
         float sizex = 1.0f;
         float sizey = 1.0f;
         float sizez = 1.0f;
+        glm::vec3 groundRay;
 
         Camera attachedCamera;
 

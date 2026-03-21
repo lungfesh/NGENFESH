@@ -17,63 +17,108 @@ bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_co
         bounding_box_corner1.z < bounding_box_corner4.z &&
         bounding_box_corner2.z > bounding_box_corner3.z
     ) {
-        // std::cout << "Collision at " << glfwGetTime() << std::endl;
         return true;
     }
     return false;
 }
+glm::vec3 castRay(glm::vec3 origin, glm::vec3 direction, float rayLength, const std::vector<Element*> Objects) { // this is making me think suicidal thoughts
+    direction = glm::normalize(direction);
+    glm::vec3 hitPoint = glm::vec3(0.0f,0.0f,0.0f);
+    float closestT = rayLength;
 
-// given origin, direction, loop thru Element list and check if it hit anything and return where it hit
-glm::vec3 castRay(glm::vec3 origin, glm::vec3 direction, const std::vector<Element> Objects) {
     for (size_t i = 0; i < Objects.size(); i++) {
-        if (Objects[i].isPlayer) continue;
-        float tx1 = (Objects[i].bounding_box_corner1.x - origin.x) / direction.x;
-        float tx2 = (Objects[i].bounding_box_corner2.x - origin.x) / direction.x;
-        float tmin_x = std::min(tx1,tx2);
-        float tmax_x = std::max(tx1,tx2);
+        Element* obj = Objects[i];
 
-        float ty1 = (Objects[i].bounding_box_corner1.y - origin.y) / direction.y;
-        float ty2 = (Objects[i].bounding_box_corner2.y - origin.y) / direction.y;
-        float tmin_y = std::min(ty1,ty2);
-        float tmax_y = std::max(ty1,ty2);
+        glm::vec3 t1 = (obj->bounding_box_corner1 - origin) / direction;
+        glm::vec3 t2 = (obj->bounding_box_corner2 - origin) / direction;
 
-        float tz1 = (Objects[i].bounding_box_corner1.z - origin.z) / direction.z;
-        float tz2 = (Objects[i].bounding_box_corner2.z - origin.z) / direction.z;
-        float tmin_z = std::min(tz1,tz2);
-        float tmax_z = std::max(tz1,tz2);
+        glm::vec3 tMin = glm::min(t1, t2);
+        glm::vec3 tMax = glm::max(t1, t2);
 
-        float t_enter = std::max(std::max(tmin_x, tmin_y), tmin_z);
-        float t_exit = std::min(std::max(tmax_x, tmax_y), tmax_z);
+        float tNear = std::max({tMin.x, tMin.y, tMin.z});
+        float tFar  = std::min({tMax.x, tMax.y, tMax.z});
 
-        if (t_exit >= t_enter && t_exit >= 0) {
-            return origin + direction * t_enter;
+        if (tNear <= tFar && tNear < closestT && tNear >= 0.0f) {
+            closestT = tNear;
+            hitPoint = origin + direction * tNear;
         }
     }
-    return glm::vec3();
+
+    return hitPoint;
 }
 
-std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color) {
+std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color, bool debug) {
     std::vector<float> vertices;
-    for (int x = 0; x <= 1; ++x) {
-        for (int y = 0; y <= 1; ++y) {
-            for (int z = 0; z <= 1; ++z) {
-                vertices.push_back(x ? c1.x : c2.x);
-                vertices.push_back(y ? c1.y : c2.y);
-                vertices.push_back(z ? c1.z : c2.z);
-                vertices.push_back(color.r);
-                vertices.push_back(color.g);
-                vertices.push_back(color.b);
-                
-                // UV
-                vertices.push_back(0.0f);
-                vertices.push_back(0.0f);
+    
+    float minX = std::min(c1.x, c2.x);
+    float maxX = std::max(c1.x, c2.x);
+    float minY = std::min(c1.y, c2.y);
+    float maxY = std::max(c1.y, c2.y);
+    float minZ = std::min(c1.z, c2.z);
+    float maxZ = std::max(c1.z, c2.z);
 
-                // Normal
-                vertices.push_back(0.0f);
-                vertices.push_back(0.0f);
-                vertices.push_back(0.0f);
-            }
-        }
+    // Bottom face
+    vertices.insert(vertices.end(), {minX, minY, minZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+    vertices.insert(vertices.end(), {maxX, minY, minZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+    vertices.insert(vertices.end(), {maxX, maxY, minZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+    vertices.insert(vertices.end(), {minX, maxY, minZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+
+    // Top face
+    vertices.insert(vertices.end(), {minX, minY, maxZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+    vertices.insert(vertices.end(), {maxX, minY, maxZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+    vertices.insert(vertices.end(), {maxX, maxY, maxZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    }
+    vertices.insert(vertices.end(), {minX, maxY, maxZ, color.r,color.g,color.b});
+    if (!debug) {
+        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
     }
     return vertices;
+}
+
+void drawDebugLine(glm::vec3 pos1, glm::vec3 pos2, glm::vec3 color, Shader debugShader,const glm::mat4& view, const glm::mat4& projection) {
+    std::vector<float> lineVertices = {
+        pos1.x, pos1.y, pos1.z, 1.0f, 1.0f, 1.0f,
+        pos2.x, pos2.y, pos2.z, 1.0f, 1.0f, 1.0f
+    };
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(float), lineVertices.data(), GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glDisable(GL_DEPTH_TEST);
+    debugShader.use();
+    debugShader.setMat4("view", view);
+    debugShader.setMat4("projection", projection);
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_LINES, 0, 2);
+    glEnable(GL_DEPTH_TEST);
 }
