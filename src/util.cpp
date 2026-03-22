@@ -21,32 +21,6 @@ bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_co
     }
     return false;
 }
-glm::vec3 castRay(glm::vec3 origin, glm::vec3 direction, float rayLength, const std::vector<Element*> Objects) { // this is making me think suicidal thoughts
-    direction = glm::normalize(direction);
-    glm::vec3 hitPoint = glm::vec3(0.0f,0.0f,0.0f);
-    float closestT = rayLength;
-
-    for (size_t i = 0; i < Objects.size(); i++) {
-        Element* obj = Objects[i];
-
-        glm::vec3 t1 = (obj->bounding_box_corner1 - origin) / direction;
-        glm::vec3 t2 = (obj->bounding_box_corner2 - origin) / direction;
-
-        glm::vec3 tMin = glm::min(t1, t2);
-        glm::vec3 tMax = glm::max(t1, t2);
-
-        float tNear = std::max({tMin.x, tMin.y, tMin.z});
-        float tFar  = std::min({tMax.x, tMax.y, tMax.z});
-
-        if (tNear <= tFar && tNear < closestT && tNear >= 0.0f) {
-            closestT = tNear;
-            hitPoint = origin + direction * tNear;
-        }
-    }
-
-    return hitPoint;
-}
-
 std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color, bool debug) {
     std::vector<float> vertices;
     

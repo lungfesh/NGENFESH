@@ -40,9 +40,10 @@ class Element {
         float sizex = 1.0f;
         float sizey = 1.0f;
         float sizez = 1.0f;
-        glm::vec3 groundRay;
 
         Camera attachedCamera;
+
+        int id = NAN;
 
         // PHYSICS
         // by default: all has collision, all can have velocity
@@ -112,5 +113,8 @@ class HUDElement {
 
         float currentAngle = 0.0f; // to track rotation over time
 };
+
+// returns id
+int addToWorld(Element* e, std::vector<Element*>& Objects);
 
 #endif

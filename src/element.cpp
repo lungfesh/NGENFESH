@@ -46,12 +46,6 @@ void Element::init() {
 
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
         glEnableVertexAttribArray(1);
-
-        // glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(6*sizeof(float)));
-        // glEnableVertexAttribArray(2);
-
-        // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(8*sizeof(float)));
-        // glEnableVertexAttribArray(3);
     }
 };
 void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
@@ -85,11 +79,15 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
         currentAngle += rotationSpeed * deltaTime;
         if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
     }
+    grounded = false; // we check if grounded later so we js reset until then
+    // me after figuring out previous line: https://tenor.com/view/aaaughhhh-gif-10795548499260202596
     if (lastPosition != position && (hasCollision)) {
         for (size_t i = 0; i < Objects.size(); i++) {
             if (Objects[i] == this) {continue;}
             if (Objects[i]->debug == true) {continue;} // do not collide with debug elements
             if (Objects[i]->position == position) {continue;} // oh the horrors
+            if (!Objects[i]->hasCollision) continue;
+            if (Objects[i]->id == id) continue; 
             if (AABBCollideDetect(position+bounding_box_corner1,
                 position+bounding_box_corner2,
                 Objects[i]->position+Objects[i]->bounding_box_corner1, 
@@ -100,8 +98,7 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                 float pz = std::min(position.z+bounding_box_corner2.z, Objects[i]->position.z+Objects[i]->bounding_box_corner2.z) - std::max(position.z+bounding_box_corner1.z, Objects[i]->position.z+Objects[i]->bounding_box_corner1.z);
                 // thanks chatgpt
                 // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
-                // this should probably have it's own func
-                // if (glm::length(velocity) == 0.0f) return;
+                // this should probably have it's own func, or be in physics_step
                 if (bounce) {
                     if (px < py && px < pz) { // z axis has most overlap
                         float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
@@ -110,8 +107,9 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                         if (glm::abs(velocity.x) < 0.08f) velocity.x = 0.0f;
                     }
                     else if (py < pz) { // y axis has most overlap
+                        if (grounded) return;
                         float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
-                        position.y += py * dir;
+                        // position.y += py * dir;
                         velocity.y = -velocity.y * bounce_amount;
                         if (glm::abs(velocity.y) < 0.08f) velocity.y = 0.0f;
                     }
@@ -127,37 +125,30 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                         position.x += px * dir;
                         Objects[i]->velocity.x = velocity.x;
                         velocity.x = 0;
-                    } else if (py < pz) {
+                        // printf("x collide\n");
+                    } else if (py < pz) { // y collide
+                        // if (grounded) return;
                         float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
                         position.y += py * dir;
                         Objects[i]->velocity.y = velocity.y;
                         velocity.y = 0;
+                        grounded = true;
+                        // if (isPlayer) {
+                        //     printf("id: %i, y collide, grounded is set to %s\n", id, (grounded) ? "true" : "false");
+                        // }
                     } else {
                         float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
                         position.z += pz * dir;
                         Objects[i]->velocity.z = velocity.z;
                         velocity.z = 0;
+                        // printf("z collide\n");
                     }
                 }
             }
         }
     }
-    // check if element is grounded (on top of another object)
-    float epsilon = 0.01f; // small tolerance
-    float groundRayLength = bounding_box_corner1.y - position.y;
-    groundRay = castRay(position, glm::vec3(0.0f, -1.0f, 0.0f), groundRayLength, Objects);
-
-    if (!glm::isnan(groundRay.y)) {
-        float bottomY = position.y + bounding_box_corner1.y;
-        grounded = (bottomY - groundRay.y) <= epsilon;
-    } else {
-        grounded = false;
-    }
     
     lastPosition = position;
-    if (isPlayer) {
-        printf("%f %f %f\n", position.x, position.y, position.z);
-    }
 }
         
 glm::mat4 Element::getMatrix() const { // get model matrix
@@ -180,22 +171,8 @@ bool Element::getUseTexture() const {
 }
 
 void Element::physics_step(float dt) {
-        if (anchored) return;
-        velocity.y += -9.8*dt;
-
-    // now dampen so it doesn't fly forever
-    float damping = 2.0f; // units per second
-    if (glm::length(velocity) > 0.0f) {
-        glm::vec3 decel = glm::normalize(velocity) * damping * dt;
-        if (glm::length(decel) > glm::length(velocity))
-            velocity = glm::vec3(0.0f); // stop completely
-        else {
-            velocity -= decel;
-        }
-    }
-    if (glm::length(velocity) < 0.1f) {
-        velocity = glm::vec3(0.0f);
-    }
+    if (anchored) return;
+    velocity.y += -9.8f * dt;
     position += velocity * dt; // apply velocity
 }
 
@@ -260,4 +237,10 @@ HUDElement::~HUDElement() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
+}
+
+int addToWorld(Element* e, std::vector<Element*>& Objects) { // very demure, very mindful func
+    e->id = Objects.size()+1;
+    Objects.push_back(e);
+    return e->id;
 }

@@ -77,9 +77,13 @@ void processInput(GLFWwindow *window, Element* player) {
     player->velocity.x = moveDir.x * cameraSpeed;
     player->velocity.z = moveDir.z * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (!player->grounded) {return;}
-        // if (player->velocity.y > 0.0f) {return;}
+        if (player->grounded == false) {return;}
         player->velocity.y = 10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+        // printf("breakeeeee\n");
+        printf("id: %i, pressed g, grounded is set to %s\n", player->id, (player->grounded) ? "true" : "false");
+        // player->velocity = glm::vec3{0.0f};
     }
 }
 
@@ -138,7 +142,7 @@ int main() {
     quad.sizey = 1.0f;
     quad.sizez = 20.0f;
     quad.init();
-    Objects.push_back(&quad);
+    addToWorld(&quad, Objects);
 
     Element skybox1;
     skybox1.vertices = {QUAD_VERTICES};
@@ -153,7 +157,7 @@ int main() {
     skybox1.position.x = 0.0f;
     skybox1.position.y = 20.0f;
     skybox1.init();
-    Objects.push_back(&skybox1);
+    addToWorld(&skybox1, Objects);
 
     Element cube;
     cube.vertices = {CUBE_VERTICES};
@@ -173,17 +177,7 @@ int main() {
     cube.anchored = true;
 
     cube.init();
-    Objects.push_back(&cube);
-    
-    // Element cubeBB;
-    // // cubeBB.debug = true;
-    // cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2, glm::vec3(1.0f,1.0f,1.0f));
-    // cubeBB.indices = {CUBEBB_INDICES};
-    // cubeBB.position = cube.position;
-    // // cubeBB.draw_mode = GL_LINES;
-    // cubeBB.init();
-    // Objects.push_back(&cubeBB);
-    // cube.debugElement = &cubeBB;
+    addToWorld(&cube, Objects);
 
     Element player;
     player.wireframe = true;
@@ -215,11 +209,11 @@ int main() {
     // Right face (maxX)
     1, 2, 6,
     6, 5, 1};
-    player.init();
-    Objects.push_back(&player);
     player.anchored = false;
     player.hasCollision = true;
     player.isPlayer = true;
+    player.init();
+    addToWorld(&player, Objects);
 
     Element lightSource;
     lightSource.vertices = cube.vertices;
@@ -228,7 +222,11 @@ int main() {
     lightSource.position.y = 1.0f;
     lightSource.position.z = 0.0f;
     lightSource.init();
-    Objects.push_back(&lightSource);
+    addToWorld(&lightSource, Objects);
+
+    // for (Element* e : Objects) {
+    //     printf("init object id of %i pos %f %f %f %s\n", e->id, e->position.x, e->position.y, e->position.z, (e->isPlayer) ? "Is player" : "");
+    // }
 
     // create shaders
     Shader objectShader("shaders/object.vert", "shaders/object.frag");
@@ -248,9 +246,6 @@ int main() {
 
     glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
 
-    // Shader hudShader("shaders/hud.vert", "shaders/hud.frag");
-    // square.shader = &hudShader;
-
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
 
@@ -262,7 +257,6 @@ int main() {
         mainCamera.pos = player.position + cameraOffset;
         accumulator += deltaTime;
         while (accumulator >= dt) {
-            // player.physics_step(dt);
             for (Element* e : Objects) {
                 e->physics_step(dt);
             }
@@ -284,13 +278,8 @@ int main() {
 
         for (Element* e : Objects) {
             e->update(deltaTime, Objects);
-            // drawDebugLine(e->position, e->groundRay, glm::vec3(1.0f), debugShader, mainCamera.view(), projection);
             e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos, glfwGetTime());
         };
-        // for (HUDElement* e : HUDObjects) {
-            // e->update(deltaTime);
-            // e->draw();
-        // };
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
