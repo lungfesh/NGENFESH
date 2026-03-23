@@ -15,6 +15,7 @@
 #include "util.hpp"
 #include "element.hpp"
 #include "premade_elements.hpp"
+#include "player.hpp"
 
 float windowWidth = 512.0f;
 float windowHeight = 512.0f;
@@ -26,11 +27,16 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 } // called each time window is resized, and sets viewport size
 
 float lastMouseX = windowWidth/2, lastMouseY = windowHeight/2;
-
 Camera mainCamera;
+Player defaultPlayer; // doing this for support for multiple players in the future
+Player* controlledPlayer = &defaultPlayer;
 
 // handle mouse movement, change pitch/yaw of mainCamera to match that of the mouse x and y offset
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (!controlledPlayer || !controlledPlayer->camera()) {
+        std::cerr << "Player or camera is null!" << std::endl;
+        return;
+    }
     float xoffset = xpos - lastMouseX;
     float yoffset = lastMouseY - ypos;
     lastMouseX = xpos;
@@ -40,31 +46,29 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     xoffset *= sensitivity;
     yoffset *= sensitivity;
 
-    mainCamera.yaw += xoffset;
-    mainCamera.pitch += yoffset;
-
-    if (mainCamera.pitch > 89.9f)
-        mainCamera.pitch = 89.9f;
-    if (mainCamera.pitch < -89.9f)
-        mainCamera.pitch = -89.9f;
+    controlledPlayer->camera()->setYaw(controlledPlayer->camera()->getYaw()+xoffset);
+    controlledPlayer->camera()->setPitch(controlledPlayer->camera()->getPitch()+yoffset);
 }
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
 
-void processInput(GLFWwindow *window, Element* player) {
+void processInput(GLFWwindow *window, Player* player) {
+    if (!controlledPlayer) {
+        std::cerr << "Player is null! 58" << std::endl;
+        return;
+    }
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
-    float cameraSpeed = mainCamera.speed * deltaTime;
-    glm::vec3 right = glm::normalize(glm::cross(mainCamera.front,mainCamera.up));
-    glm::vec3 forward = mainCamera.front;
+    float cameraSpeed = controlledPlayer->getSpeed() * deltaTime;
+    glm::vec3 right = glm::normalize(glm::cross(controlledPlayer->camera()->getOrientation(),controlledPlayer->camera()->getUp()));
+    glm::vec3 forward = controlledPlayer->camera()->getOrientation();
     forward.y = 0.0f;
     if (glm::length(forward) > 0.0f)
         forward = glm::normalize(forward);
-
     glm::vec3 moveDir = glm::vec3(0.0f);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // 0
         moveDir += forward;
@@ -74,15 +78,15 @@ void processInput(GLFWwindow *window, Element* player) {
         moveDir -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         moveDir += right;
-    player->velocity.x = moveDir.x * cameraSpeed;
-    player->velocity.z = moveDir.z * cameraSpeed;
+    controlledPlayer->setVelocityX(moveDir.x * cameraSpeed);
+    controlledPlayer->setVelocityZ(moveDir.z * cameraSpeed);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (player->grounded == false) {return;}
-        player->velocity.y = 10.0f;
+        if (controlledPlayer->getMoveState() == 'g') {return;}
+        controlledPlayer->setVelocityY(10.0f);
     }
     if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
         // printf("breakeeeee\n");
-        printf("id: %i, pressed g, grounded is set to %s\n", player->id, (player->grounded) ? "true" : "false");
+        // printf("id: %i, pressed g, grounded is set to %s\n", player->id, (controlledPlayer->getMove) ? "true" : "false");
         // player->velocity = glm::vec3{0.0f};
     }
 }
@@ -126,6 +130,14 @@ int main() {
     }
     std::vector<Element*> Objects; // create Objects list
 
+    controlledPlayer->init(Objects, &mainCamera);
+    controlledPlayer->setPosition(glm::vec3(0.0f,10.0f,0.0f));
+    if (controlledPlayer->camera()) {
+        printf("%f\n", controlledPlayer->camera()->getOrientation().x);
+    } else {
+        printf("Camera pointer is null!\n");
+    }
+
     // start creating objects
     Element quad;
     quad.vertices = {QUAD_VERTICES};
@@ -163,7 +175,7 @@ int main() {
     cube.vertices = {CUBE_VERTICES};
     cube.indices = {CUBE_INDICES};
     cube.bounding_box_corner1 = glm::vec3(-0.5f, -0.5f, -0.5f);
-    cube.bounding_box_corner1 = glm::vec3(0.5f, 0.5f, 0.5f);
+    cube.bounding_box_corner2 = glm::vec3(0.5f, 0.5f, 0.5f);
     cube.position.x = 5.0f;
     cube.position.y = 5.0f;
     cube.useTexture = true;
@@ -178,42 +190,6 @@ int main() {
 
     cube.init();
     addToWorld(&cube, Objects);
-
-    Element player;
-    player.wireframe = true;
-    // player.vertices = {CUBE_VERTICES};
-    player.position = glm::vec3(0.0f,5.0f,0.0f);
-    player.bounding_box_corner1 = glm::vec3(-0.5);
-    player.bounding_box_corner2 = glm::vec3(0.5f, 1.5f, 0.5f);
-    player.vertices = calcBoundingBoxVerts(player.bounding_box_corner1, player.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f));
-    // player.vertices = {CUBE_VERTICES};
-    player.indices = {    0, 1, 2,
-    2, 3, 0,
-
-    // Top face
-    4, 5, 6,
-    6, 7, 4,
-
-    // Front face (minZ)
-    0, 1, 5,
-    5, 4, 0,
-
-    // Back face (maxZ)
-    3, 2, 6,
-    6, 7, 3,
-
-    // Left face (minX)
-    0, 3, 7,
-    7, 4, 0,
-
-    // Right face (maxX)
-    1, 2, 6,
-    6, 5, 1};
-    player.anchored = false;
-    player.hasCollision = true;
-    player.isPlayer = true;
-    player.init();
-    addToWorld(&player, Objects);
 
     Element lightSource;
     lightSource.vertices = cube.vertices;
@@ -244,17 +220,14 @@ int main() {
     }
     lightSource.shader = &lightShader;
 
-    glm::vec3 cameraOffset = glm::vec3(0.0f,1.0f,0.0f);
-
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
 
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     while (!glfwWindowShouldClose(window)) {
-        processInput(window, &player);
-
-        mainCamera.pos = player.position + cameraOffset;
+        controlledPlayer->update();
+        processInput(window, controlledPlayer);
         accumulator += deltaTime;
         while (accumulator >= dt) {
             for (Element* e : Objects) {
@@ -262,23 +235,17 @@ int main() {
             }
             accumulator -= dt;    
         } 
-
         // now onto rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-        glm::vec3 direction;
-        direction.x = cos(glm::radians(mainCamera.yaw)) * cos(glm::radians(mainCamera.pitch));
-        direction.y = sin(glm::radians(mainCamera.pitch));
-        direction.z = sin(glm::radians(mainCamera.yaw)) * cos(glm::radians(mainCamera.pitch));
-        mainCamera.front = glm::normalize(direction);
-
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
-
+        printf("player pos: %f %f %f\n", controlledPlayer->getPosition().x, controlledPlayer->getPosition().y,controlledPlayer->getPosition().z);
+        printf("controlledplayer->camera()->front.x: %f\n", controlledPlayer->camera()->getOrientation().x);
         for (Element* e : Objects) {
             e->update(deltaTime, Objects);
-            e->draw(mainCamera.view(), projection, lightSource, mainCamera.pos, glfwGetTime());
+            e->draw(controlledPlayer->camera()->view(), projection, lightSource, controlledPlayer->camera()->getPos(), glfwGetTime());
         };
         glfwSwapBuffers(window);
         glfwPollEvents();

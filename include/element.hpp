@@ -34,6 +34,8 @@ class Element {
         Shader* shader = nullptr;
         glm::vec3 lightColor;
 
+        // bounding_box_corner1 is min, bounding_box_corner2 is max
+        // ALWAYS make sure min is lower (y position is less than) max
         glm::vec3 bounding_box_corner1{-0.5}; // for a 1x1 unit cube
         glm::vec3 bounding_box_corner2{0.5};
         
@@ -41,7 +43,7 @@ class Element {
         float sizey = 1.0f;
         float sizez = 1.0f;
 
-        Camera attachedCamera;
+        Camera* attachedCamera;
 
         int id = NAN;
 
