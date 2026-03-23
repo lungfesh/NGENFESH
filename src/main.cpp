@@ -217,8 +217,8 @@ int main() {
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
-        printf("player pos: %f %f %f\n", controlledPlayer->getPosition().x, controlledPlayer->getPosition().y,controlledPlayer->getPosition().z);
-        printf("controlledplayer->camera()->front.x: %f\n", controlledPlayer->camera()->getOrientation().x);
+        // printf("player pos: %f %f %f\n", controlledPlayer->getPosition().x, controlledPlayer->getPosition().y,controlledPlayer->getPosition().z);
+        // printf("controlledplayer->camera()->front.x: %f\n", controlledPlayer->camera()->getOrientation().x);
         for (Element* e : Objects) {
             e->update(deltaTime, Objects);
             e->draw(controlledPlayer->camera()->view(), projection, lightSource, controlledPlayer->camera()->getPos(), glfwGetTime());
