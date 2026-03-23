@@ -41,15 +41,34 @@ void Player::update() {
     attachedCamera->update();
     playerState.position = playerElement.position;
     attachedCamera->setPos(playerState.position + attachedCamera->getOffset());
-    attachedCamera->setFront(playerState.cameraOrientation);
+    playerState.cameraOrientation = camera()->getOrientation();
     playerState.velocity = playerElement.velocity;
     orient(attachedCamera->getYaw(), attachedCamera->getPitch());
-    // attachedCamera->setPos(playerState.position);
-    // orient(playerState.cameraOrientation)
+
+    playerState.moveState = (playerElement.grounded) ? 'g' : 'a';
 }
 
-void Player::keyInput() {
-
+void Player::keyInput(GLFWwindow *window, float deltaTime) {
+    glm::vec3 right = glm::normalize(glm::cross(camera()->getOrientation(),camera()->getUp()));
+    glm::vec3 forward = camera()->getOrientation();
+    forward.y = 0.0f;
+    if (glm::length(forward) > 0.0f)
+        forward = glm::normalize(forward);
+    glm::vec3 moveDir = glm::vec3(0.0f);
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // 0
+        moveDir += forward;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        moveDir -= forward;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        moveDir -= right;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        moveDir += right;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (getMoveState() == 'a') {return;}
+        setVelocityY(10.0f);
+    }
+    setVelocityX(moveDir.x * playerState.speed*deltaTime);
+    setVelocityZ(moveDir.z * playerState.speed*deltaTime);
 }
 
 void Player::orient(float yaw, float pitch) { // sets to yaw and pitch

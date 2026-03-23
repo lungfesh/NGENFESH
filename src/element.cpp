@@ -173,6 +173,20 @@ bool Element::getUseTexture() const {
 void Element::physics_step(float dt) {
     if (anchored) return;
     velocity.y += -9.8f * dt;
+    // why did i get rid of this?!
+    // now dampen so it doesn't fly forever
+    float damping = 2.0f; // units per second
+    if (glm::length(velocity) > 0.0f) {
+        glm::vec3 decel = glm::normalize(velocity) * damping * dt;
+        if (glm::length(decel) > glm::length(velocity))
+            velocity = glm::vec3(0.0f); // stop completely
+        else {
+            velocity -= decel;
+        }
+    }
+    if (glm::length(velocity) < 0.1f) {
+        velocity = glm::vec3(0.0f);
+    }
     position += velocity * dt; // apply velocity
 }
 

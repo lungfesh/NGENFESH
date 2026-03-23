@@ -30,6 +30,8 @@ float lastMouseX = windowWidth/2, lastMouseY = windowHeight/2;
 Camera mainCamera;
 Player defaultPlayer; // doing this for support for multiple players in the future
 Player* controlledPlayer = &defaultPlayer;
+bool inMenu = false;
+float currentFrame = 0.0f, deltaTime = 0.0f, lastFrame = 0.0f;
 
 // handle mouse movement, change pitch/yaw of mainCamera to match that of the mouse x and y offset
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -49,9 +51,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     controlledPlayer->camera()->setYaw(controlledPlayer->camera()->getYaw()+xoffset);
     controlledPlayer->camera()->setPitch(controlledPlayer->camera()->getPitch()+yoffset);
 }
-float deltaTime = 0.0f;	// Time between current frame and last frame
-float lastFrame = 0.0f; // Time of last frame
-
 
 void processInput(GLFWwindow *window, Player* player) {
     if (!controlledPlayer) {
@@ -60,34 +59,8 @@ void processInput(GLFWwindow *window, Player* player) {
     }
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    float currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
-    float cameraSpeed = controlledPlayer->getSpeed() * deltaTime;
-    glm::vec3 right = glm::normalize(glm::cross(controlledPlayer->camera()->getOrientation(),controlledPlayer->camera()->getUp()));
-    glm::vec3 forward = controlledPlayer->camera()->getOrientation();
-    forward.y = 0.0f;
-    if (glm::length(forward) > 0.0f)
-        forward = glm::normalize(forward);
-    glm::vec3 moveDir = glm::vec3(0.0f);
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // 0
-        moveDir += forward;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        moveDir -= forward;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        moveDir -= right;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        moveDir += right;
-    controlledPlayer->setVelocityX(moveDir.x * cameraSpeed);
-    controlledPlayer->setVelocityZ(moveDir.z * cameraSpeed);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (controlledPlayer->getMoveState() == 'g') {return;}
-        controlledPlayer->setVelocityY(10.0f);
-    }
-    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
-        // printf("breakeeeee\n");
-        // printf("id: %i, pressed g, grounded is set to %s\n", player->id, (controlledPlayer->getMove) ? "true" : "false");
-        // player->velocity = glm::vec3{0.0f};
+    if (!inMenu) {
+        player->keyInput(window, deltaTime);
     }
 }
 
@@ -226,6 +199,9 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     while (!glfwWindowShouldClose(window)) {
+        currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
         controlledPlayer->update();
         processInput(window, controlledPlayer);
         accumulator += deltaTime;

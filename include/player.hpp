@@ -20,7 +20,7 @@ class Player {
             return attachedCamera;
         }
         // keyInput() will go through it's binds, move or do whatever if needed 
-        void keyInput();
+        void keyInput(GLFWwindow *window, float deltaTime);
         void orient(float yaw, float pitch);
         float getSpeed() {
             return playerState.speed;
@@ -34,9 +34,10 @@ class Player {
         void setPosition(glm::vec3 pos) {
             playerElement.position = pos;
         }
-        void setVelocityX(float x) {playerState.velocity.x = x;}
-        void setVelocityY(float y) {playerState.velocity.y = y;}
-        void setVelocityZ(float z) {playerState.velocity.z = z;}
+        void setVelocity(glm::vec3 aVelocity) {playerElement.velocity = aVelocity;}
+        void setVelocityX(float x) {playerElement.velocity.x = x;}
+        void setVelocityY(float y) {playerElement.velocity.y = y;}
+        void setVelocityZ(float z) {playerElement.velocity.z = z;}
         char getMoveState() {return playerState.moveState;}
     private:
         Camera* attachedCamera;
@@ -48,7 +49,7 @@ class Player {
             glm::vec3 cameraOrientation;
             float speed = 200.0f;
         };
-        state playerState;
+        state playerState; // do not edit playerstate.pos/vel, this is only for reading
 };
 
 #endif

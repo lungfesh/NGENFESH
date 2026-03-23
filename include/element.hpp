@@ -54,7 +54,6 @@ class Element {
         bool anchored = false; // velocity does not affect element, cannot be moved
         bool bounce = false;
         float bounce_amount = 0.5f; // how much energy to lose, default at 50%
-        bool grounded = false; // only for player, check for if on ground and let player jump if so.
         bool hasCollision = true;
 
         Element* debugElement = nullptr;
@@ -78,6 +77,7 @@ class Element {
         bool getUseTexture() const;
         void physics_step(float dt);
         ~Element();
+        bool grounded = false; // only for player, check for if on ground and let player jump if so.
 };
 
 
