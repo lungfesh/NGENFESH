@@ -14,6 +14,8 @@
 #include "texture.hpp"
 #include "util.hpp"
 #include "element.hpp"
+#include "shader_def.hpp"
+
 void Element::init() {
     if (useTexture)
         texture.init(textureFile);
@@ -47,6 +49,7 @@ void Element::init() {
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
         glEnableVertexAttribArray(1);
     }
+    debugVAOVBO = newDebugLine();
 };
 void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
     if (!shader) return;
@@ -71,6 +74,9 @@ void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& 
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
     if (useTexture)
         texture.unUse();
+    // draw debug ray
+    drawDebugLine(debugVAOVBO.x, debugVAOVBO.y, position, glm::vec3(0.0f, -1.0f, 0.0f), 1.0f, *debugShader, view, projection);
+
 };
 void Element::update(float deltaTime, std::vector<Element*>& Objects) { // deltaTime is how long since last frame and current (i think)
     if (debugElement != nullptr)
@@ -96,7 +102,6 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                 float px = std::min(position.x+bounding_box_corner2.x, Objects[i]->position.x+Objects[i]->bounding_box_corner2.x) - std::max(position.x+bounding_box_corner1.x, Objects[i]->position.x+Objects[i]->bounding_box_corner1.x);
                 float py = std::min(position.y+bounding_box_corner2.y, Objects[i]->position.y+Objects[i]->bounding_box_corner2.y) - std::max(position.y+bounding_box_corner1.y, Objects[i]->position.y+Objects[i]->bounding_box_corner1.y);
                 float pz = std::min(position.z+bounding_box_corner2.z, Objects[i]->position.z+Objects[i]->bounding_box_corner2.z) - std::max(position.z+bounding_box_corner1.z, Objects[i]->position.z+Objects[i]->bounding_box_corner1.z);
-                // thanks chatgpt
                 // we're checking which axis has the most overlap, setting pos of 1 object to not be inside the other, setting vel on that axis to 0
                 // this should probably have it's own func, or be in physics_step
                 if (bounce) {
@@ -119,7 +124,7 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                         velocity.z = -velocity.z;
                         if (glm::abs(velocity.z) < 0.08f) velocity.z = 0.0f;
                     }
-                    } else {
+                } else {
                     if (px < py && px < pz) {
                         float dir = (position.x < Objects[i]->position.x) ? -1.0f : 1.0f;
                         position.x += px * dir;
@@ -127,21 +132,17 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                         velocity.x = 0;
                         // printf("x collide\n");
                     } else if (py < pz) { // y collide
-                        // if (grounded) return;
                         float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
-                        position.y += py * dir;
+                        // position.y += py * dir;
                         Objects[i]->velocity.y = velocity.y;
-                        velocity.y = 0;
-                        grounded = true;
-                        // if (isPlayer) {
-                        //     printf("id: %i, y collide, grounded is set to %s\n", id, (grounded) ? "true" : "false");
-                        // }
+                        if (velocity.y < 0.0f) // if we are falling/pushing down 
+                            grounded = true;
+                        velocity.y = 0.0f;
                     } else {
                         float dir = (position.z < Objects[i]->position.z) ? -1.0f : 1.0f;
                         position.z += pz * dir;
                         Objects[i]->velocity.z = velocity.z;
                         velocity.z = 0;
-                        // printf("z collide\n");
                     }
                 }
             }
@@ -172,8 +173,9 @@ bool Element::getUseTexture() const {
 
 void Element::physics_step(float dt) {
     if (anchored) return;
-    velocity.y += -9.8f * dt;
-    // why did i get rid of this?!
+    if (gravity) {
+        velocity.y += -9.8f * dt;
+    }
     // now dampen so it doesn't fly forever
     float damping = 2.0f; // units per second
     if (glm::length(velocity) > 0.0f) {

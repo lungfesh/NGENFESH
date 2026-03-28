@@ -16,6 +16,7 @@
 #include "element.hpp"
 #include "premade_elements.hpp"
 #include "player.hpp"
+#include "shader_def.hpp"
 
 float windowWidth = 512.0f;
 float windowHeight = 512.0f;
@@ -101,6 +102,7 @@ int main() {
         std::cerr << "Error creating window! Closing..";
         return -1;
     }
+    initShaders();
     std::vector<Element*> Objects; // create Objects list
 
     controlledPlayer->init(Objects, &mainCamera);
@@ -148,7 +150,7 @@ int main() {
     cube.vertices = {CUBE_VERTICES};
     cube.indices = {CUBE_INDICES};
     cube.bounding_box_corner1 = glm::vec3(-0.5f, -0.5f, -0.5f);
-    cube.bounding_box_corner2 = glm::vec3(0.5f, 0.5f, 0.5f);
+    cube.bounding_box_corner2 = glm::vec3(0.5f, 0.5f,  0.5f);
     cube.position.x = 5.0f;
     cube.position.y = 5.0f;
     cube.useTexture = true;
@@ -159,10 +161,26 @@ int main() {
     cube.textureFile = "textures/doomerfesh.png";
     // cube.bounce = true;
     // cube.bounce_amount = .75f;
-    cube.anchored = true;
+    // cube.anchored = true;
+    cube.gravity = false;
 
     cube.init();
     addToWorld(&cube, Objects);
+
+    Element wall1;
+    wall1.vertices = {QUAD_VERTICES};
+    wall1.indices = {QUAD_INDICES};
+    wall1.bounding_box_corner1 = glm::vec3(-2.0f, -0.1f, -2.0f);
+    wall1.bounding_box_corner2 = glm::vec3(2.0f, 0.0f, 2.0f);
+    wall1.position = glm::vec3(2.0f, 2.0f, 4.0f);
+    wall1.sizex = 2.0f;
+    wall1.sizey = 2.0f;
+    wall1.sizez = 2.0f;
+    wall1.rotate = true;
+    wall1.rotation = glm::vec3(1.0f,0.0f,0.0f);
+    wall1.anchored = true;
+    wall1.init();
+    addToWorld(&wall1,Objects);
 
     Element lightSource;
     lightSource.vertices = cube.vertices;
@@ -178,20 +196,18 @@ int main() {
     // }
 
     // create shaders
-    Shader objectShader("shaders/object.vert", "shaders/object.frag");
-    Shader lightShader("shaders/light.vert", "shaders/light.frag");
-    Shader debugShader("shaders/debug.vert", "shaders/debug.frag");
+
 
     lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     // apply shaders
     for (size_t i = 0; i<Objects.size();i++) {
         if (Objects[i]->debug)
-            Objects[i]->shader = &debugShader;
+            Objects[i]->shader = debugShader;
         else
-            Objects[i]->shader = &objectShader;
+            Objects[i]->shader = objectShader;
     }
-    lightSource.shader = &lightShader;
+    lightSource.shader = lightShader;
 
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;

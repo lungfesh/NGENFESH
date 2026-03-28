@@ -19,12 +19,12 @@ void Player::init(std::vector<Element*>& Objects, Camera* cam) {
     }
     printf("player.cpp: Creating element for player...\n");
     // create Element for player
-    playerElement.wireframe = true;
+    // playerElement.wireframe = true;
     playerElement.position = glm::vec3(0.0f,5.0f,0.0f);
     playerElement.bounding_box_corner1 = glm::vec3(-0.5);
     playerElement.bounding_box_corner2 = glm::vec3(0.5f, 1.5f, 0.5f);
-    playerElement.vertices = calcBoundingBoxVerts(playerElement.bounding_box_corner1, playerElement.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f));
-    playerElement.indices = {CUBE_INDICES};
+    // playerElement.vertices = calcBoundingBoxVerts(playerElement.bounding_box_corner1, playerElement.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f));
+    // playerElement.indices = {CUBE_INDICES};
     playerElement.anchored = false;
     playerElement.hasCollision = true;
     playerElement.isPlayer = true;
@@ -63,12 +63,12 @@ void Player::keyInput(GLFWwindow *window, float deltaTime) {
         moveDir -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         moveDir += right;
+    setVelocityX(moveDir.x * playerState.speed*deltaTime);
+    setVelocityZ(moveDir.z * playerState.speed*deltaTime);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
         if (getMoveState() == 'a') {return;}
         setVelocityY(10.0f);
     }
-    setVelocityX(moveDir.x * playerState.speed*deltaTime);
-    setVelocityZ(moveDir.z * playerState.speed*deltaTime);
 }
 
 void Player::orient(float yaw, float pitch) { // sets to yaw and pitch

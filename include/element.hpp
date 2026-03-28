@@ -55,6 +55,7 @@ class Element {
         bool bounce = false;
         float bounce_amount = 0.5f; // how much energy to lose, default at 50%
         bool hasCollision = true;
+        bool gravity = true;
 
         Element* debugElement = nullptr;
         bool debug = false;
@@ -78,6 +79,8 @@ class Element {
         void physics_step(float dt);
         ~Element();
         bool grounded = false; // only for player, check for if on ground and let player jump if so.
+
+        glm::uvec2 debugVAOVBO;
 };
 
 

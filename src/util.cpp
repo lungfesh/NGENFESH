@@ -68,31 +68,47 @@ std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 co
     }
     return vertices;
 }
+// returns ID of VAO,VBO of new debug line
+glm::uvec2 newDebugLine() {
+    unsigned int debugVAO;
+    unsigned int debugVBO; 
+    glGenVertexArrays(1, &debugVAO);
+    glGenBuffers(1, &debugVBO);
 
-void drawDebugLine(glm::vec3 pos1, glm::vec3 pos2, glm::vec3 color, Shader debugShader,const glm::mat4& view, const glm::mat4& projection) {
-    std::vector<float> lineVertices = {
-        pos1.x, pos1.y, pos1.z, 1.0f, 1.0f, 1.0f,
-        pos2.x, pos2.y, pos2.z, 1.0f, 1.0f, 1.0f
-    };
-    unsigned int VAO, VBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(float), lineVertices.data(), GL_DYNAMIC_DRAW);
+    glBindVertexArray(debugVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, debugVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 12, nullptr, GL_DYNAMIC_DRAW); // GL_DYNAMIC_DRAW means we are updating this often, probably not every frame though
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    
+
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glDisable(GL_DEPTH_TEST);
+    return glm::uvec2(debugVAO, debugVBO);
+}
+void drawDebugLine(unsigned int VAO, unsigned int VBO, glm::vec3 origin, glm::vec3 direction, float length, Shader& debugShader, const glm::mat4& view, const glm::mat4& projection) {
+    direction = glm::normalize(direction);
+    glm::vec3 color = glm::abs(direction);
+    std::vector<float> lineVertices = {
+        origin.x, origin.y, origin.z, color.x, color.y, color.z,
+        origin.x + (length * direction.x), origin.y + (length * direction.y), origin.z + (length * direction.z), color.x, color.y, color.z
+    };
+
+    // glDisable(GL_DEPTH_TEST);
+    glLineWidth(0.5f);
     debugShader.use();
     debugShader.setMat4("view", view);
     debugShader.setMat4("projection", projection);
+
     glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * lineVertices.size(), lineVertices.data()); // so cool!
+
     glDrawArrays(GL_LINES, 0, 2);
-    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_DEPTH_TEST);
 }
+
+// hitPoint castRay(glm::vec3 origin, glm::vec3 direction) {
+
+// }

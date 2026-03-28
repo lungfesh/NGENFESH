@@ -7,7 +7,18 @@
 bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_corner2, glm::vec3 bounding_box_corner3, glm::vec3 bounding_box_corner4);
 
 std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 color = glm::vec3(1.0f), bool debug = false);
-void drawDebugLine(glm::vec3 pos1, glm::vec3 pos2, glm::vec3 color, Shader debugShader,const glm::mat4& view, const glm::mat4& projection);
-// compliation takes awhile, might be better to put contents of util.cpp in here
+glm::uvec2 newDebugLine();
+void drawDebugLine(unsigned int VAO, unsigned int VBO, glm::vec3 origin, glm::vec3 direction, float length, Shader& debugShader, const glm::mat4& view, const glm::mat4& projection);
+
+// given 3 vertices, return normal vector
+inline glm::vec3 calcNormal(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+    return glm::normalize(glm::cross((v1 - v0), (v2 - v0)));
+}
+
+// struct hitPoint {
+    // Element* hitElement = nullptr;
+    // glm::vec3 hitPos = glm::vec3();
+    // float distance = NAN;
+// };
 
 #endif
