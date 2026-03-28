@@ -133,9 +133,9 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
                         // printf("x collide\n");
                     } else if (py < pz) { // y collide
                         float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
-                        // position.y += py * dir;
+                        position.y += py * dir;
                         Objects[i]->velocity.y = velocity.y;
-                        if (velocity.y < 0.0f) // if we are falling/pushing down 
+                        if (dir == 1.0f) // if we are falling/pushing down 
                             grounded = true;
                         velocity.y = 0.0f;
                     } else {

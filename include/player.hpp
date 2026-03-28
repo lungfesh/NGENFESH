@@ -48,6 +48,7 @@ class Player {
             glm::vec3 velocity;
             glm::vec3 cameraOrientation;
             float speed = 200.0f;
+            float jumpPower = 6.0f;
         };
         state playerState; // do not edit playerstate.pos/vel, this is only for reading
 };

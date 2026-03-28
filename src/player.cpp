@@ -67,7 +67,7 @@ void Player::keyInput(GLFWwindow *window, float deltaTime) {
     setVelocityZ(moveDir.z * playerState.speed*deltaTime);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
         if (getMoveState() == 'a') {return;}
-        setVelocityY(10.0f);
+        setVelocityY(playerState.jumpPower);
     }
 }
 
