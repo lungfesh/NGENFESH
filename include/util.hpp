@@ -14,11 +14,13 @@ void drawDebugLine(unsigned int VAO, unsigned int VBO, glm::vec3 origin, glm::ve
 inline glm::vec3 calcNormal(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
     return glm::normalize(glm::cross((v1 - v0), (v2 - v0)));
 }
+// given list of vertices, return min and max
+std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices);
 
 // struct hitPoint {
-    // Element* hitElement = nullptr;
-    // glm::vec3 hitPos = glm::vec3();
-    // float distance = NAN;
+//     Element* hitElement = nullptr;
+//    glm::vec3 hitPos = glm::vec3();
+//    float distance = NAN;
 // };
 
 #endif

@@ -49,7 +49,7 @@ void Element::init() {
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
         glEnableVertexAttribArray(1);
     }
-    debugVAOVBO = newDebugLine();
+    // debugVAOVBO = newDebugLine();
 };
 void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
     if (!shader) return;
@@ -63,30 +63,72 @@ void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& 
     shader->setVec3("lightColor", lightSource.lightColor);
     shader->setVec3("lightPos", glm::vec3(lightSource.position.x, lightSource.position.y, lightSource.position.z));
     shader->setVec3("viewPos", cameraPos);
-    if (wireframe)
+    if (wireframe || debug)
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     if (useTexture)
         texture.use();
     glBindVertexArray(VAO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glDrawElements(draw_mode, indices.size(), GL_UNSIGNED_INT, 0);
-    if (wireframe)
+    if (wireframe || debug)
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
     if (useTexture)
         texture.unUse();
     // draw debug ray
-    drawDebugLine(debugVAOVBO.x, debugVAOVBO.y, position, glm::vec3(0.0f, -1.0f, 0.0f), 1.0f, *debugShader, view, projection);
+    // drawDebugLine(debugVAOVBO.x, debugVAOVBO.y, position, glm::vec3(0.0f, -1.0f, 0.0f), 1.0f, *debugShader, view, projection);
 
 };
-void Element::update(float deltaTime, std::vector<Element*>& Objects) { // deltaTime is how long since last frame and current (i think)
+void Element::update(float deltaTime) { // deltaTime is how long since last frame and current (i think)
     if (debugElement != nullptr)
         debugElement->position = position;
-    if (rotate) {
+    if (rotate) { // this is for the matrix we use to render it, we should also implement obb and rotate that aswell.
         currentAngle += rotationSpeed * deltaTime;
         if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
     }
+}
+        
+glm::mat4 Element::getMatrix() const { // get model matrix
+    glm::mat4 model = glm::mat4(1.0f); // define 4x4 matrix
+    model = glm::translate(model, position); // add position translation to matrix
+    model = glm::scale(model, glm::vec3(sizex, sizey, sizez));
+    if (rotate) { // if we're rotating it
+        model = glm::translate(model, pivot); // translate first by pivot point
+        model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
+        model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+        model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
+        model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
+        model = glm::translate(model, -pivot); // translate by negative pivot point, no idea why we do this i think i stole this from somewhere
+    }
+    return model;
+}
+
+bool Element::getUseTexture() const {
+    return useTexture;
+}
+
+void Element::physics_step(float dt, std::vector<Element*>& Objects) {
+    if (anchored) return;
+    if (gravity) {
+        velocity.y += -9.8f * dt;
+    }
+
+    // now dampen so it doesn't fly forever
+    float damping = 2.0f; // units per second
+    if (glm::length(velocity) > 0.0f) {
+        glm::vec3 decel = glm::normalize(velocity) * damping * dt;
+        if (glm::length(decel) > glm::length(velocity))
+            velocity = glm::vec3(0.0f); // stop completely
+        else {
+            velocity -= decel;
+        }
+    }
+    if (glm::length(velocity) < 0.1f) {
+        velocity = glm::vec3(0.0f);
+    }
+    position += velocity * dt; // apply velocity
     grounded = false; // we check if grounded later so we js reset until then
     // me after figuring out previous line: https://tenor.com/view/aaaughhhh-gif-10795548499260202596
+
     if (lastPosition != position && (hasCollision)) {
         for (size_t i = 0; i < Objects.size(); i++) {
             if (Objects[i] == this) {continue;}
@@ -150,46 +192,6 @@ void Element::update(float deltaTime, std::vector<Element*>& Objects) { // delta
     }
     
     lastPosition = position;
-}
-        
-glm::mat4 Element::getMatrix() const { // get model matrix
-    glm::mat4 model = glm::mat4(1.0f); // define 4x4 matrix
-    model = glm::translate(model, position); // add position translation to matrix
-    model = glm::scale(model, glm::vec3(sizex, sizey, sizez));
-    if (rotate) { // if we're rotating it
-        model = glm::translate(model, pivot); // translate first by pivot point
-        model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
-        model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
-        model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
-        model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
-        model = glm::translate(model, -pivot); // translate by negative pivot point, no idea why we do this i think i stole this from somewhere
-    }
-    return model;
-}
-
-bool Element::getUseTexture() const {
-    return useTexture;
-}
-
-void Element::physics_step(float dt) {
-    if (anchored) return;
-    if (gravity) {
-        velocity.y += -9.8f * dt;
-    }
-    // now dampen so it doesn't fly forever
-    float damping = 2.0f; // units per second
-    if (glm::length(velocity) > 0.0f) {
-        glm::vec3 decel = glm::normalize(velocity) * damping * dt;
-        if (glm::length(decel) > glm::length(velocity))
-            velocity = glm::vec3(0.0f); // stop completely
-        else {
-            velocity -= decel;
-        }
-    }
-    if (glm::length(velocity) < 0.1f) {
-        velocity = glm::vec3(0.0f);
-    }
-    position += velocity * dt; // apply velocity
 }
 
 Element::~Element() {

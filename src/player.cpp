@@ -46,6 +46,8 @@ void Player::update() {
     orient(attachedCamera->getYaw(), attachedCamera->getPitch());
 
     playerState.moveState = (playerElement.grounded) ? 'g' : 'a';
+    // printf("velocity: %f %f %f\n", getVelocityX(), getVelocityY(), getVelocityZ());
+    // printf("total speed: %f\n----\n", glm::sqrt(getVelocityX()*getVelocityX() + getVelocityY()*getVelocityY() + getVelocityZ()*getVelocityZ()));
 }
 
 void Player::keyInput(GLFWwindow *window, float deltaTime) {

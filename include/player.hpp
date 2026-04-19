@@ -39,6 +39,9 @@ class Player {
         void setVelocityY(float y) {playerElement.velocity.y = y;}
         void setVelocityZ(float z) {playerElement.velocity.z = z;}
         char getMoveState() {return playerState.moveState;}
+        float getVelocityX() {return playerState.velocity.x;}
+        float getVelocityY() {return playerState.velocity.y;}
+        float getVelocityZ() {return playerState.velocity.z;}
     private:
         Camera* attachedCamera;
         Element playerElement;

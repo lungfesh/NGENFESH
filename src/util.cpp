@@ -14,6 +14,7 @@ bool AABBCollideDetect(glm::vec3 bounding_box_corner1, glm::vec3 bounding_box_co
 
         bounding_box_corner1.y < bounding_box_corner4.y &&
         bounding_box_corner2.y > bounding_box_corner3.y &&
+        
         bounding_box_corner1.z < bounding_box_corner4.z &&
         bounding_box_corner2.z > bounding_box_corner3.z
     ) {
@@ -33,39 +34,39 @@ std::vector<float> calcBoundingBoxVerts(glm::vec3 c1, glm::vec3 c2, glm::vec3 co
 
     // Bottom face
     vertices.insert(vertices.end(), {minX, minY, minZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     vertices.insert(vertices.end(), {maxX, minY, minZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     vertices.insert(vertices.end(), {maxX, maxY, minZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     vertices.insert(vertices.end(), {minX, maxY, minZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
 
     // Top face
     vertices.insert(vertices.end(), {minX, minY, maxZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     vertices.insert(vertices.end(), {maxX, minY, maxZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     vertices.insert(vertices.end(), {maxX, maxY, maxZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     vertices.insert(vertices.end(), {minX, maxY, maxZ, color.r,color.g,color.b});
-    if (!debug) {
-        vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
-    }
+    // if (!debug) {
+    //     vertices.insert(vertices.end(), {0.0f,0.0f, 0.0f,0.0f,0.0f});
+    // }
     return vertices;
 }
 // returns ID of VAO,VBO of new debug line
@@ -107,6 +108,23 @@ void drawDebugLine(unsigned int VAO, unsigned int VBO, glm::vec3 origin, glm::ve
 
     glDrawArrays(GL_LINES, 0, 2);
     // glEnable(GL_DEPTH_TEST);
+}
+// we are passing entire vertices std::vector in now, we should probably a vector for each element with js the pos coords in the future
+std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices) {
+    glm::vec3 min = glm::vec3(0.0f,0.0f,0.0f);
+    glm::vec3 max = glm::vec3(0.0f,0.0f,0.0f);
+    for (size_t i = 0; i < vertices.size(); i=i+11) {
+        min.x = std::min(min.x, vertices[i+0]);
+        min.y = std::min(min.y, vertices[i+1]);
+        min.z = std::min(min.z, vertices[i+2]);
+    
+        max.x = std::max(max.x, vertices[i+0]);
+        max.y = std::max(max.y, vertices[i+1]);
+        max.z = std::max(max.z, vertices[i+2]);
+    }
+    return std::vector<glm::vec3> {
+        min, max
+    };
 }
 
 // hitPoint castRay(glm::vec3 origin, glm::vec3 direction) {

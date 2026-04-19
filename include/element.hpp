@@ -73,10 +73,10 @@ class Element {
 
         void init();
         void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const;
-        void update(float deltaTime, std::vector<Element*>& Objects);
+        void update(float deltaTime);
         glm::mat4 getMatrix() const;
         bool getUseTexture() const;
-        void physics_step(float dt);
+        void physics_step(float dt, std::vector<Element*>& Objects);
         ~Element();
         bool grounded = false; // only for player, check for if on ground and let player jump if so.
 
