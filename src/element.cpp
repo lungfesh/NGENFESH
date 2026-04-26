@@ -108,7 +108,7 @@ bool Element::getUseTexture() const {
 
 void Element::physics_step(float dt, std::vector<Element*>& Objects) {
     if (anchored) return;
-    if (gravity) {
+    if (gravity && !anchored) {
         velocity.y += -9.8f * dt;
     }
 
@@ -131,11 +131,13 @@ void Element::physics_step(float dt, std::vector<Element*>& Objects) {
 
     if (lastPosition != position && (hasCollision)) {
         for (size_t i = 0; i < Objects.size(); i++) {
+
             if (Objects[i] == this) {continue;}
             if (Objects[i]->debug == true) {continue;} // do not collide with debug elements
             if (Objects[i]->position == position) {continue;} // oh the horrors
             if (!Objects[i]->hasCollision) continue;
             if (Objects[i]->id == id) continue; 
+            
             if (AABBCollideDetect(position+bounding_box_corner1,
                 position+bounding_box_corner2,
                 Objects[i]->position+Objects[i]->bounding_box_corner1, 

@@ -42,9 +42,9 @@ class Player {
         float getVelocityX() {return playerState.velocity.x;}
         float getVelocityY() {return playerState.velocity.y;}
         float getVelocityZ() {return playerState.velocity.z;}
-    private:
-        Camera* attachedCamera;
         Element playerElement;
+        Camera* attachedCamera;
+    private:
         struct state { // probably gonna want to make some sort of humanoid class with this instead, and just use that
             char moveState = 'g'; // 'a' for grounded, 'a' for in air
             glm::vec3 position;
