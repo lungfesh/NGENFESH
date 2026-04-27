@@ -127,6 +127,36 @@ std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices) {
     };
 }
 
-// hitPoint castRay(glm::vec3 origin, glm::vec3 direction) {
+Rayhit Raycast(glm::vec3 origin, glm::vec3 direction, std::vector<Element*>& Objects, Element* caster) { // https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
+    Rayhit hit;
+    float closest = FLT_MAX;
+    for (size_t i = 0; i < Objects.size(); i++) {
+        if (Objects[i]->debug == true) {continue;} // do not collide with debug elements
+        if (!Objects[i]->hasCollision) {continue;}
+        if (Objects[i] == caster) {continue;}
 
-// }
+        glm::vec3 min = Objects[i]->position + Objects[i]->bounding_box_corner1;
+        glm::vec3 max = Objects[i]->position + Objects[i]->bounding_box_corner2;
+        
+        float t1 = (min.x - origin.x) / direction.x;
+        float t2 = (max.x - origin.x) / direction.x;
+        float t3 = (min.y - origin.y) / direction.y;
+        float t4 = (max.y - origin.y) / direction.y;
+        float t5 = (min.z - origin.z) / direction.z;
+        float t6 = (max.z - origin.z) / direction.z;
+
+        float tmin = glm::max(glm::max(glm::min(t1, t2), glm::min(t3, t4)), glm::min(t5, t6));
+        float tmax = glm::min(glm::min(glm::max(t1, t2), glm::max(t3, t4)), glm::max(t5, t6));
+
+        if (tmax < 0.0f || tmin > tmax) continue;
+
+        float t = (tmin >= 0.0f) ? tmin : tmax;
+
+        if (t < hit.distance) {
+            hit.distance = t;
+            hit.hitElement = Objects[i];
+        }
+        // return tmin;
+    }
+    return hit;
+}

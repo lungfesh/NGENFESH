@@ -53,7 +53,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     controlledPlayer->camera()->setPitch(controlledPlayer->camera()->getPitch()+yoffset);
 }
 
-void processInput(GLFWwindow *window, Player* player) {
+void processInput(GLFWwindow *window, Player* player, std::vector<Element*>& Objects) {
     if (!controlledPlayer) {
         std::cerr << "Player is null! 58" << std::endl;
         return;
@@ -61,7 +61,7 @@ void processInput(GLFWwindow *window, Player* player) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (!inMenu) {
-        player->keyInput(window, deltaTime);
+        player->keyInput(window, deltaTime, Objects);
     }
 }
 
@@ -110,6 +110,23 @@ int main() {
     if (!controlledPlayer->camera()) {
         printf("Camera pointer is null!\n");
     }
+    Element playerBB;
+    playerBB.debug = true;
+    playerBB.vertices = calcBoundingBoxVerts(controlledPlayer->playerElement.bounding_box_corner1, controlledPlayer->playerElement.bounding_box_corner2, glm::vec3{1.0f}, true);
+    playerBB.indices = {CUBEBB_INDICES};
+    playerBB.position = glm::vec3(2.0f, 2.0f, 5.0f);
+    playerBB.sizex = 1.0f;
+    playerBB.sizey = 1.0f;
+    playerBB.sizez = 1.0f;
+    // wall1.rotate = true;
+    playerBB.rotation = glm::vec3(1.0f,0.0f,0.0f);
+    playerBB.anchored = true;
+    playerBB.hasCollision = false;
+    // cubeBB.draw_mode = GL_LINES;
+    playerBB.debug = true;
+    playerBB.init();
+    addToWorld(&playerBB,Objects);
+    controlledPlayer->playerElement.debugElement = &playerBB;
 
     // start creating objects
     Element quad;
@@ -205,7 +222,7 @@ int main() {
     }
     wall1.indices = {QUAD_INDICES};
     std::vector<glm::vec3> wall1Points = calcBoundingBoxPoints(wall1.vertices);
-    wall1.bounding_box_corner1 = wall1Points[0];
+    wall1.bounding_box_corner1 = wall1Points[0] - .1f;
     wall1.bounding_box_corner2 = wall1Points[1];
     wall1.position = glm::vec3(2.0f, 2.0f, 4.0f);
     // wall1.sizex = 2.0f;
@@ -230,7 +247,8 @@ int main() {
     wall1BB.debug = true;
     wall1BB.init();
     addToWorld(&wall1BB,Objects);
-
+    wall1.debugElement = &wall1BB;
+  
     Element lightSource;
     lightSource.vertices = {CUBE_VERTICES};
     lightSource.indices = {CUBE_INDICES};
@@ -265,7 +283,7 @@ int main() {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         controlledPlayer->update();
-        processInput(window, controlledPlayer);
+        processInput(window, controlledPlayer, Objects);
         accumulator += deltaTime;
         while (accumulator >= dt) {
             for (Element* e : Objects) {

@@ -20,7 +20,7 @@ class Player {
             return attachedCamera;
         }
         // keyInput() will go through it's binds, move or do whatever if needed 
-        void keyInput(GLFWwindow *window, float deltaTime);
+        void keyInput(GLFWwindow *window, float deltaTime, std::vector<Element*>& Objects);
         void orient(float yaw, float pitch);
         float getSpeed() {
             return playerState.speed;
@@ -38,10 +38,14 @@ class Player {
         void setVelocityX(float x) {playerElement.velocity.x = x;}
         void setVelocityY(float y) {playerElement.velocity.y = y;}
         void setVelocityZ(float z) {playerElement.velocity.z = z;}
+        
         char getMoveState() {return playerState.moveState;}
+
         float getVelocityX() {return playerState.velocity.x;}
         float getVelocityY() {return playerState.velocity.y;}
         float getVelocityZ() {return playerState.velocity.z;}
+        glm::vec3 getCameraOrientation() {return playerState.cameraOrientation;};
+        glm::vec3 getCameraPos() {return attachedCamera->getPos();};
         Element playerElement;
         Camera* attachedCamera;
     private:

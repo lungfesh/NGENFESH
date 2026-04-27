@@ -17,10 +17,12 @@ inline glm::vec3 calcNormal(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
 // given list of vertices, return min and max
 std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices);
 
-// struct hitPoint {
-//     Element* hitElement = nullptr;
-//    glm::vec3 hitPos = glm::vec3();
-//    float distance = NAN;
-// };
+struct Rayhit {
+    Element* hitElement = nullptr;
+    glm::vec3 hitPos = glm::vec3(NAN);
+    float distance = FLT_MAX;
+};
+
+Rayhit Raycast(glm::vec3 origin, glm::vec3 direction, std::vector<Element*>& Objects, Element* caster = nullptr);
 
 #endif

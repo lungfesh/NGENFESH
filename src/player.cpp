@@ -46,11 +46,12 @@ void Player::update() {
     orient(attachedCamera->getYaw(), attachedCamera->getPitch());
 
     playerState.moveState = (playerElement.grounded) ? 'g' : 'a';
+    // printf("player is %s\n", (playerState.moveState == 'g') ? "grounded" : "in air");
     // printf("velocity: %f %f %f\n", getVelocityX(), getVelocityY(), getVelocityZ());
     // printf("total speed: %f\n----\n", glm::sqrt(getVelocityX()*getVelocityX() + getVelocityY()*getVelocityY() + getVelocityZ()*getVelocityZ()));
 }
 
-void Player::keyInput(GLFWwindow *window, float deltaTime) {
+void Player::keyInput(GLFWwindow *window, float deltaTime, std::vector<Element*>& Objects) {
     glm::vec3 right = glm::normalize(glm::cross(camera()->getOrientation(),camera()->getUp()));
     glm::vec3 forward = camera()->getOrientation();
     forward.y = 0.0f;
@@ -58,7 +59,7 @@ void Player::keyInput(GLFWwindow *window, float deltaTime) {
         forward = glm::normalize(forward);
     glm::vec3 moveDir = glm::vec3(0.0f);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // 0
-        moveDir += forward;
+        {moveDir += forward;}
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
         moveDir -= forward;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
@@ -67,9 +68,18 @@ void Player::keyInput(GLFWwindow *window, float deltaTime) {
         moveDir += right;
     setVelocityX(moveDir.x * playerState.speed*deltaTime);
     setVelocityZ(moveDir.z * playerState.speed*deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        if (getMoveState() == 'a') {return;}
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && (getMoveState() != 'a')) {
         setVelocityY(playerState.jumpPower);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), Objects, &playerElement);
+        if (pickupHit.hitElement != nullptr) {
+            printf("Hit!\n");
+            pickupHit.hitElement->position = getCameraPos() + getCameraOrientation() * 2.0f;
+            return;
+        }
+        printf("No hit!\n");
     }
 }
 
