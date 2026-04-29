@@ -48,6 +48,8 @@ class Player {
         glm::vec3 getCameraPos() {return attachedCamera->getPos();};
         Element playerElement;
         Camera* attachedCamera;
+
+        void attemptPickupElement(std::vector<Element*>& Objects);
     private:
         struct state { // probably gonna want to make some sort of humanoid class with this instead, and just use that
             char moveState = 'g'; // 'a' for grounded, 'a' for in air
@@ -56,6 +58,8 @@ class Player {
             glm::vec3 cameraOrientation;
             float speed = 200.0f;
             float jumpPower = 6.0f;
+            bool holdingSomething;
+            Element* heldElement;
         };
         state playerState; // do not edit playerstate.pos/vel, this is only for reading
 };

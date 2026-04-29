@@ -46,6 +46,10 @@ void Player::update() {
     orient(attachedCamera->getYaw(), attachedCamera->getPitch());
 
     playerState.moveState = (playerElement.grounded) ? 'g' : 'a';
+    if (playerState.holdingSomething) {
+        playerState.heldElement->position = getCameraPos() + getCameraOrientation() * 2.0f;
+        playerState.heldElement->gravity = false;
+    }
     // printf("player is %s\n", (playerState.moveState == 'g') ? "grounded" : "in air");
     // printf("velocity: %f %f %f\n", getVelocityX(), getVelocityY(), getVelocityZ());
     // printf("total speed: %f\n----\n", glm::sqrt(getVelocityX()*getVelocityX() + getVelocityY()*getVelocityY() + getVelocityZ()*getVelocityZ()));
@@ -73,14 +77,26 @@ void Player::keyInput(GLFWwindow *window, float deltaTime, std::vector<Element*>
     }
 
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-        Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), Objects, &playerElement);
-        if (pickupHit.hitElement != nullptr) {
-            printf("Hit!\n");
-            pickupHit.hitElement->position = getCameraPos() + getCameraOrientation() * 2.0f;
+        attemptPickupElement(Objects);
+    }
+}
+
+void Player::attemptPickupElement(std::vector<Element*>& Objects) {
+        if (playerState.holdingSomething) {
+            playerState.holdingSomething = false;
+            playerState.heldElement->gravity = true;
+            playerState.heldElement = nullptr;
+            printf("No longer holding something.\n");
             return;
         }
-        printf("No hit!\n");
-    }
+
+        Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), Objects, &playerElement);
+        if (pickupHit.hitElement != nullptr) {
+            playerState.holdingSomething = true;
+            playerState.heldElement = pickupHit.hitElement;
+            printf("Hit something and now holding it\n");
+        }
+        printf("Hit nothing and dropped nothing.\n");
 }
 
 void Player::orient(float yaw, float pitch) { // sets to yaw and pitch
