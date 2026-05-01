@@ -25,4 +25,10 @@ struct Rayhit {
 
 Rayhit Raycast(glm::vec3 origin, glm::vec3 direction, std::vector<Element*>& Objects, Element* caster = nullptr);
 
+struct KeyState {
+    int currentState;
+    int pastState;
+};
+
+
 #endif

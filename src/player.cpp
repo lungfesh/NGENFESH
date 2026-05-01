@@ -34,7 +34,11 @@ void Player::init(std::vector<Element*>& Objects, Camera* cam) {
         printf("player.cpp: attachCamera is nullptr!\n");
         return;
     }
-    addToWorld(&playerElement, Objects);
+    if (WorldObjects == nullptr) {
+        printf("WorldObjects is not set for player!\n");
+        return;
+    }
+    addToWorld(&playerElement, *WorldObjects);
 };
 
 void Player::update() {
@@ -55,48 +59,47 @@ void Player::update() {
     // printf("total speed: %f\n----\n", glm::sqrt(getVelocityX()*getVelocityX() + getVelocityY()*getVelocityY() + getVelocityZ()*getVelocityZ()));
 }
 
-void Player::keyInput(GLFWwindow *window, float deltaTime, std::vector<Element*>& Objects) {
+void Player::keyInput(float deltaTime, KeyState keys[512]) {
     glm::vec3 right = glm::normalize(glm::cross(camera()->getOrientation(),camera()->getUp()));
     glm::vec3 forward = camera()->getOrientation();
     forward.y = 0.0f;
     if (glm::length(forward) > 0.0f)
         forward = glm::normalize(forward);
     glm::vec3 moveDir = glm::vec3(0.0f);
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // 0
-        {moveDir += forward;}
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    
+    if (keys[GLFW_KEY_W].currentState)
+        moveDir += forward;
+    if (keys[GLFW_KEY_S].currentState)
         moveDir -= forward;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (keys[GLFW_KEY_A].currentState)
         moveDir -= right;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (keys[GLFW_KEY_D].currentState)
         moveDir += right;
-    setVelocityX(moveDir.x * playerState.speed*deltaTime);
-    setVelocityZ(moveDir.z * playerState.speed*deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && (getMoveState() != 'a')) {
-        setVelocityY(playerState.jumpPower);
-    }
 
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-        attemptPickupElement(Objects);
-    }
+    if (glm::length(moveDir) > 0.0f)
+        moveDir = glm::normalize(moveDir);
+
+    playerElement.velocity.x = moveDir.x * playerState.speed;
+    playerElement.velocity.z = moveDir.z * playerState.speed;
+    
+    if (keys[GLFW_KEY_SPACE].currentState && getMoveState() == 'g') playerElement.velocity.y += playerState.jumpPower;
+
+    if (keys[GLFW_KEY_E].currentState && !keys[GLFW_KEY_E].pastState) attemptPickupElement();
 }
 
-void Player::attemptPickupElement(std::vector<Element*>& Objects) {
+void Player::attemptPickupElement() {
         if (playerState.holdingSomething) {
             playerState.holdingSomething = false;
             playerState.heldElement->gravity = true;
             playerState.heldElement = nullptr;
-            printf("No longer holding something.\n");
             return;
         }
 
-        Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), Objects, &playerElement);
+        Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), *WorldObjects, &playerElement);
         if (pickupHit.hitElement != nullptr) {
             playerState.holdingSomething = true;
             playerState.heldElement = pickupHit.hitElement;
-            printf("Hit something and now holding it\n");
         }
-        printf("Hit nothing and dropped nothing.\n");
 }
 
 void Player::orient(float yaw, float pitch) { // sets to yaw and pitch

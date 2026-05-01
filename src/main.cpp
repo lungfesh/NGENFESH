@@ -34,6 +34,36 @@ Player* controlledPlayer = &defaultPlayer;
 bool inMenu = false;
 float currentFrame = 0.0f, deltaTime = 0.0f, lastFrame = 0.0f;
 
+KeyState keys[512] = {};
+int keysToCheck[512] = {
+    GLFW_KEY_W,
+    GLFW_KEY_A,
+    GLFW_KEY_S,
+    GLFW_KEY_D,
+    GLFW_KEY_E,
+    GLFW_KEY_SPACE,
+};
+
+void processInput(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
+    for (int key : keysToCheck) {
+        int keyState = glfwGetKey(window, key);
+        if (keyState == GLFW_PRESS) {
+            keys[key].pastState = keys[key].currentState;
+            keys[key].currentState = true;
+            if (keys[key].currentState != keys[key].pastState)
+                printf("%c PRESSED    CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
+        }
+        if (keyState == GLFW_RELEASE) {
+            keys[key].pastState = keys[key].currentState;
+            keys[key].currentState = false;
+            if (keys[key].currentState != keys[key].pastState)
+                printf("%c IS RELEASED       CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
+        }
+    }
+    controlledPlayer->keyInput(deltaTime, keys);
+}
+
 // handle mouse movement, change pitch/yaw of mainCamera to match that of the mouse x and y offset
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (!controlledPlayer || !controlledPlayer->camera()) {
@@ -51,18 +81,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
     controlledPlayer->camera()->setYaw(controlledPlayer->camera()->getYaw()+xoffset);
     controlledPlayer->camera()->setPitch(controlledPlayer->camera()->getPitch()+yoffset);
-}
-
-void processInput(GLFWwindow *window, Player* player, std::vector<Element*>& Objects) {
-    if (!controlledPlayer) {
-        std::cerr << "Player is null! 58" << std::endl;
-        return;
-    }
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-    if (!inMenu) {
-        player->keyInput(window, deltaTime, Objects);
-    }
 }
 
 GLFWwindow* initWindow() {
@@ -98,6 +116,7 @@ int main() {
     // std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
     GLFWwindow* window = initWindow();
+    // glfwSetKeyCallback(window, key_callback);
     if (window == NULL) {
         std::cerr << "Error creating window! Closing..";
         return -1;
@@ -105,6 +124,7 @@ int main() {
     initShaders();
     std::vector<Element*> Objects; // create Objects list
 
+    controlledPlayer->setWorld(&Objects);
     controlledPlayer->init(Objects, &mainCamera);
     controlledPlayer->setPosition(glm::vec3(0.0f,10.0f,0.0f));
     if (!controlledPlayer->camera()) {
@@ -279,11 +299,11 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     while (!glfwWindowShouldClose(window)) {
+        processInput(window);
         currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         controlledPlayer->update();
-        processInput(window, controlledPlayer, Objects);
         accumulator += deltaTime;
         while (accumulator >= dt) {
             for (Element* e : Objects) {

@@ -20,7 +20,7 @@ class Player {
             return attachedCamera;
         }
         // keyInput() will go through it's binds, move or do whatever if needed 
-        void keyInput(GLFWwindow *window, float deltaTime, std::vector<Element*>& Objects);
+        void keyInput(float deltaTime, KeyState keys[512]);
         void orient(float yaw, float pitch);
         float getSpeed() {
             return playerState.speed;
@@ -48,20 +48,25 @@ class Player {
         glm::vec3 getCameraPos() {return attachedCamera->getPos();};
         Element playerElement;
         Camera* attachedCamera;
-
-        void attemptPickupElement(std::vector<Element*>& Objects);
+        void setWorld(std::vector<Element*>* Objects) {
+            if (WorldObjects == nullptr) {
+                WorldObjects = Objects;
+            }
+        }
+        void attemptPickupElement();
     private:
         struct state { // probably gonna want to make some sort of humanoid class with this instead, and just use that
             char moveState = 'g'; // 'a' for grounded, 'a' for in air
             glm::vec3 position;
             glm::vec3 velocity;
             glm::vec3 cameraOrientation;
-            float speed = 200.0f;
+            float speed = 5.0f;
             float jumpPower = 6.0f;
             bool holdingSomething;
             Element* heldElement;
         };
         state playerState; // do not edit playerstate.pos/vel, this is only for reading
+        std::vector<Element*>* WorldObjects;
 };
 
 #endif
