@@ -56,6 +56,7 @@ class Element {
         float bounce_amount = 0.5f; // how much energy to lose, default at 50%
         bool hasCollision = true;
         bool gravity = true;
+        bool holdable = true;
 
         Element* debugElement = nullptr;
         bool debug = false;

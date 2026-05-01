@@ -42,7 +42,8 @@ int keysToCheck[512] = {
     GLFW_KEY_D,
     GLFW_KEY_E,
     GLFW_KEY_SPACE,
-};
+}; // if this gets bigger, more complex, user defined keys, etc, more complex input system should be made
+//                                                               including callbacks, etc
 
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
@@ -51,14 +52,14 @@ void processInput(GLFWwindow* window) {
         if (keyState == GLFW_PRESS) {
             keys[key].pastState = keys[key].currentState;
             keys[key].currentState = true;
-            if (keys[key].currentState != keys[key].pastState)
-                printf("%c PRESSED    CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
+            // if (keys[key].currentState != keys[key].pastState)
+                // printf("%c PRESSED    CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
         }
         if (keyState == GLFW_RELEASE) {
             keys[key].pastState = keys[key].currentState;
             keys[key].currentState = false;
-            if (keys[key].currentState != keys[key].pastState)
-                printf("%c IS RELEASED       CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
+            // if (keys[key].currentState != keys[key].pastState)
+                // printf("%c IS RELEASED       CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
         }
     }
     controlledPlayer->keyInput(deltaTime, keys);
@@ -163,6 +164,7 @@ int main() {
     quad.sizex = 20.0f;
     quad.sizey = 1.0f;
     quad.sizez = 20.0f;
+    quad.holdable = false;
     quad.init();
     addToWorld(&quad, Objects);
 

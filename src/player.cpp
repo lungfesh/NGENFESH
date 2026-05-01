@@ -50,7 +50,7 @@ void Player::update() {
     orient(attachedCamera->getYaw(), attachedCamera->getPitch());
 
     playerState.moveState = (playerElement.grounded) ? 'g' : 'a';
-    if (playerState.holdingSomething) {
+    if (playerState.holdingSomething) { // if holding object, hold it
         playerState.heldElement->position = getCameraPos() + getCameraOrientation() * 2.0f;
         playerState.heldElement->gravity = false;
     }
@@ -97,6 +97,7 @@ void Player::attemptPickupElement() {
 
         Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), *WorldObjects, &playerElement);
         if (pickupHit.hitElement != nullptr) {
+            if (!pickupHit.hitElement->holdable) return;
             playerState.holdingSomething = true;
             playerState.heldElement = pickupHit.hitElement;
         }
