@@ -22,6 +22,7 @@ class Element {
         glm::vec3 position{0.0f};
         glm::vec3 lastPosition{0.0f};
         glm::vec3 velocity{0.0f};
+        glm::vec3 holdVelocity{0.0f};
         bool wireframe = false;
         GLenum draw_mode = GL_TRIANGLES;
 
@@ -32,7 +33,10 @@ class Element {
         Texture texture;
 
         Shader* shader = nullptr;
-        glm::vec3 lightColor;
+        
+        bool emitPointLight = false;
+        glm::vec3 pointLightColor;
+        float pointLightSpecStrength = 0.5f;
 
         // bounding_box_corner1 is min, bounding_box_corner2 is max
         // ALWAYS make sure min is lower (y position is less than) max
@@ -122,5 +126,6 @@ class HUDElement {
 
 // returns id
 int addToWorld(Element* e, std::vector<Element*>& Objects);
+extern std::vector<Element*> PointLights;
 
 #endif

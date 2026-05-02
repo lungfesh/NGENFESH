@@ -16,6 +16,7 @@
 #include "element.hpp"
 #include "shader_def.hpp"
 
+std::vector<Element*> PointLights;
 void Element::init() {
     if (useTexture)
         texture.init(textureFile);
@@ -49,6 +50,10 @@ void Element::init() {
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3*sizeof(float)));
         glEnableVertexAttribArray(1);
     }
+
+    if (emitPointLight) {
+        PointLights.push_back(this);
+    }
     // debugVAOVBO = newDebugLine();
 };
 void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
@@ -60,8 +65,8 @@ void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& 
     shader->setMat4("projection", projection);
     shader->setMat4("model", getMatrix());
     shader->setInt("useTexture", getUseTexture());
-    shader->setVec3("lightColor", lightSource.lightColor);
-    shader->setVec3("lightPos", glm::vec3(lightSource.position.x, lightSource.position.y, lightSource.position.z));
+    // shader->setVec3("lightColor", lightSource.lightColor);
+    // shader->setVec3("lightPos", glm::vec3(lightSource.position.x, lightSource.position.y, lightSource.position.z));
     shader->setVec3("viewPos", cameraPos);
     if (wireframe || debug)
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -111,6 +116,9 @@ void Element::physics_step(float dt, std::vector<Element*>& Objects) {
     if (gravity && !anchored) {
         velocity.y += -9.8f * dt;
     }
+    if (holdVelocity != glm::vec3(0.0f)) {
+        velocity += holdVelocity;
+    }
 
     // now dampen so it doesn't fly forever
     float damping = 2.0f; // units per second
@@ -157,7 +165,7 @@ void Element::physics_step(float dt, std::vector<Element*>& Objects) {
                     }
                     else if (py < pz) { // y axis has most overlap
                         if (grounded) return;
-                        float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
+                        // float dir = (position.y < Objects[i]->position.y) ? -1.0f : 1.0f;
                         // position.y += py * dir;
                         velocity.y = -velocity.y * bounce_amount;
                         if (glm::abs(velocity.y) < 0.08f) velocity.y = 0.0f;

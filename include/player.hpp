@@ -20,7 +20,7 @@ class Player {
             return attachedCamera;
         }
         // keyInput() will go through it's binds, move or do whatever if needed 
-        void keyInput(float deltaTime, KeyState keys[512]);
+        void keyInput(float deltaTime, KeyState keys[512], GLFWwindow* window);
         void orient(float yaw, float pitch);
         float getSpeed() {
             return playerState.speed;
@@ -54,6 +54,7 @@ class Player {
             }
         }
         void attemptPickupElement();
+        void attemptRocketElement();
     private:
         struct state { // probably gonna want to make some sort of humanoid class with this instead, and just use that
             char moveState = 'g'; // 'a' for grounded, 'a' for in air

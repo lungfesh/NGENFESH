@@ -41,12 +41,16 @@ int keysToCheck[512] = {
     GLFW_KEY_S,
     GLFW_KEY_D,
     GLFW_KEY_E,
+    GLFW_KEY_F,
     GLFW_KEY_SPACE,
+    GLFW_KEY_ESCAPE
 }; // if this gets bigger, more complex, user defined keys, etc, more complex input system should be made
 //                                                               including callbacks, etc
 
 void processInput(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
+    // if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){ /*glfwSetWindowShouldClose(window, true);*/
+
+    // }
     for (int key : keysToCheck) {
         int keyState = glfwGetKey(window, key);
         if (keyState == GLFW_PRESS) {
@@ -62,7 +66,7 @@ void processInput(GLFWwindow* window) {
                 // printf("%c IS RELEASED       CUR: %i PREV: %i\n", key, keys[key].currentState, keys[key].pastState);
         }
     }
-    controlledPlayer->keyInput(deltaTime, keys);
+    controlledPlayer->keyInput(deltaTime, keys, window);
 }
 
 // handle mouse movement, change pitch/yaw of mainCamera to match that of the mouse x and y offset
@@ -131,23 +135,23 @@ int main() {
     if (!controlledPlayer->camera()) {
         printf("Camera pointer is null!\n");
     }
-    Element playerBB;
-    playerBB.debug = true;
-    playerBB.vertices = calcBoundingBoxVerts(controlledPlayer->playerElement.bounding_box_corner1, controlledPlayer->playerElement.bounding_box_corner2, glm::vec3{1.0f}, true);
-    playerBB.indices = {CUBEBB_INDICES};
-    playerBB.position = glm::vec3(2.0f, 2.0f, 5.0f);
-    playerBB.sizex = 1.0f;
-    playerBB.sizey = 1.0f;
-    playerBB.sizez = 1.0f;
-    // wall1.rotate = true;
-    playerBB.rotation = glm::vec3(1.0f,0.0f,0.0f);
-    playerBB.anchored = true;
-    playerBB.hasCollision = false;
-    // cubeBB.draw_mode = GL_LINES;
-    playerBB.debug = true;
-    playerBB.init();
-    addToWorld(&playerBB,Objects);
-    controlledPlayer->playerElement.debugElement = &playerBB;
+    // Element playerBB;
+    // playerBB.debug = true;
+    // playerBB.vertices = calcBoundingBoxVerts(controlledPlayer->playerElement.bounding_box_corner1, controlledPlayer->playerElement.bounding_box_corner2, glm::vec3{1.0f}, true);
+    // playerBB.indices = {CUBEBB_INDICES};
+    // playerBB.position = glm::vec3(2.0f, 2.0f, 5.0f);
+    // playerBB.sizex = 1.0f;
+    // playerBB.sizey = 1.0f;
+    // playerBB.sizez = 1.0f;
+    // // wall1.rotate = true;
+    // playerBB.rotation = glm::vec3(1.0f,0.0f,0.0f);
+    // playerBB.anchored = true;
+    // playerBB.hasCollision = false;
+    // // cubeBB.draw_mode = GL_LINES;
+    // playerBB.debug = true;
+    // playerBB.init();
+    // addToWorld(&playerBB,Objects);
+    // controlledPlayer->playerElement.debugElement = &playerBB;
 
     // start creating objects
     Element quad;
@@ -193,48 +197,17 @@ int main() {
     cube.position.y = 2.0f;
     cube.useTexture = true;
     cube.rotate = true;
-    cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
-    cube.rotationSpeed = 5.0f;
+    // cube.rotateAxis = glm::vec3(1.0f, 1.0f, 2.0f);
+    // cube.rotationSpeed = 5.0f;
     cube.pivot = glm::vec3(0.0f, 0.0f, 0.0f);
-    cube.textureFile = "textures/doomerfesh.png";
-    // cube.bounce = true;
-    // cube.bounce_amount = .75f;
-    // cube.anchored = true;
-    // cube.gravity = false;
-
-    // printf("cube:\n");
-    // int g = 0;
-    // for (float i: cube.vertices) {
-    //     printf("%f ",i);
-    //     g++;
-    //     if (g == 3){
-    //         printf("\n");
-    //         g = 0;
-    //     }
-    // }
-    // printf("cubePoints:\n %f %f %f\n%f %f %f\n", cubePoints[0].x, cubePoints[0].y, cubePoints[0].z, cubePoints[1].x, cubePoints[1].y, cubePoints[1].z);
-
-
+    cube.textureFile = "textures/lungfesh.png";
+    for (size_t i = 0; i < cube.vertices.size(); i=i+11) {
+        cube.vertices[i+3] = 1.0f;
+        cube.vertices[i+4] = 1.0f;
+        cube.vertices[i+5] = 1.0f;
+    }
     cube.init();
     addToWorld(&cube, Objects);
-    Element cubeBB;
-    cubeBB.debug = true;
-    cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2, glm::vec3{1.0f}, true);
-    cubeBB.indices = {CUBEBB_INDICES};
-    cubeBB.position = glm::vec3(2.0f, 2.0f, 5.0f);
-    cubeBB.sizex = 1.0f;
-    cubeBB.sizey = 1.0f;
-    cubeBB.sizez = 1.0f;
-    // wall1.rotate = true;
-    cubeBB.rotation = glm::vec3(1.0f,0.0f,0.0f);
-    cubeBB.anchored = true;
-    cubeBB.hasCollision = false;
-    // cubeBB.draw_mode = GL_LINES;
-    cubeBB.debug = true;
-    cubeBB.init();
-    addToWorld(&cubeBB,Objects);
-    cube.debugElement = &cubeBB;
-
     Element wall1;
     wall1.vertices = {QUAD_VERTICES};
     for (size_t i = 0; i < wall1.vertices.size(); i=i+11) { // change wall1 colour to red, should probably make a function for this
@@ -247,44 +220,20 @@ int main() {
     wall1.bounding_box_corner1 = wall1Points[0] - .1f;
     wall1.bounding_box_corner2 = wall1Points[1];
     wall1.position = glm::vec3(2.0f, 2.0f, 4.0f);
-    // wall1.sizex = 2.0f;
-    // wall1.sizey = 2.0f;
-    // wall1.sizez = 2.0f;
-    // wall1.rotate = true;
-    // wall1.rotation = glm::vec3(1.0f,0.0f,0.0f);
-    wall1.anchored = true;
     wall1.init();
     addToWorld(&wall1,Objects);
-    
-    Element wall1BB;
-    wall1BB.vertices = calcBoundingBoxVerts(wall1.bounding_box_corner1, wall1.bounding_box_corner2);
-    wall1BB.indices = {CUBEBB_INDICES};
-    wall1BB.position = glm::vec3(2.0f, 2.0f, 4.0f);
-    wall1BB.sizex = 1.0f;
-    wall1BB.sizey = 1.0f;
-    wall1BB.sizez = 1.0f;
-    // wall1.rotate = true;
-    wall1BB.rotation = glm::vec3(1.0f,0.0f,0.0f);
-    wall1BB.anchored = true;
-    wall1BB.debug = true;
-    wall1BB.init();
-    addToWorld(&wall1BB,Objects);
-    wall1.debugElement = &wall1BB;
   
     Element lightSource;
     lightSource.vertices = {CUBE_VERTICES};
     lightSource.indices = {CUBE_INDICES};
     lightSource.position.x = 5.0f;
-    lightSource.position.y = 1.0f;
+    lightSource.position.y = 3.0f;
     lightSource.position.z = 0.0f;
+
+    lightSource.emitPointLight = true;
+    lightSource.pointLightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     lightSource.init();
     addToWorld(&lightSource, Objects);
-
-    // for (Element* e : Objects) {
-    //     printf("init object id of %i pos %f %f %f %s\n", e->id, e->position.x, e->position.y, e->position.z, (e->isPlayer) ? "Is player" : "");
-    // }
-
-    lightSource.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
     // apply shaders
     for (size_t i = 0; i<Objects.size();i++) {
@@ -293,13 +242,15 @@ int main() {
         else
             Objects[i]->shader = objectShader;
     }
-    lightSource.shader = lightShader;
+    // lightSource.shader = lightShader;
 
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
 
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    printf("size of pointlights: %i\n", PointLights.size());
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
         currentFrame = glfwGetTime();
@@ -315,18 +266,27 @@ int main() {
         } 
         // now onto rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.0f,0.0f,0.0f,1.0f);
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
-        // printf("player pos: %f %f %f\n", controlledPlayer->getPosition().x, controlledPlayer->getPosition().y,controlledPlayer->getPosition().z);
-        // printf("controlledplayer->camera()->front.x: %f\n", controlledPlayer->camera()->getOrientation().x);
+        for (size_t i = 0; i < PointLights.size(); i++) {
+            printf("iteration %i-----\n", i);
+            printf("POSITION %f, %f, %f\n", PointLights[i]->position.x, PointLights[i]->position.y, PointLights[i]->position.z);
+            printf("COLOR %f, %f, %f\n", PointLights[i]->pointLightColor.x, PointLights[i]->pointLightColor.y, PointLights[i]->pointLightColor.z);
+            printf("SPEC STRENGTH %f\n", PointLights[i]->pointLightSpecStrength);
+            objectShader->setVec3("pointLights[" + std::to_string(i) + "].position", PointLights[i]->position);
+            objectShader->setVec3("pointLights[" + std::to_string(i) + "].color", PointLights[i]->pointLightColor);
+            objectShader->setFloat("pointLights[" + std::to_string(i) + "].specularStrength", PointLights[i]->pointLightSpecStrength);
+        }
+        objectShader->setInt("numPointLights", PointLights.size());
         for (Element* e : Objects) {
             e->update(deltaTime);
             e->draw(controlledPlayer->camera()->view(), projection, lightSource, controlledPlayer->camera()->getPos(), glfwGetTime());
         };
         glfwSwapBuffers(window);
         glfwPollEvents();
+        printf("done rendering frame -----\n");
     }
     glfwDestroyWindow(window);
     glfwTerminate();

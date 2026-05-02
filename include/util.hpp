@@ -30,5 +30,4 @@ struct KeyState {
     int pastState;
 };
 
-
 #endif

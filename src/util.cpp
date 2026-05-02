@@ -129,7 +129,7 @@ std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices) {
 
 Rayhit Raycast(glm::vec3 origin, glm::vec3 direction, std::vector<Element*>& Objects, Element* caster) { // https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
     Rayhit hit;
-    float closest = FLT_MAX;
+    // float closest = FLT_MAX;
     for (size_t i = 0; i < Objects.size(); i++) {
         if (Objects[i]->debug == true) {continue;} // do not collide with debug elements
         if (!Objects[i]->hasCollision) {continue;}
