@@ -28,20 +28,21 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir)
     float spec = pow(max(dot(viewDir,reflectDir),0.0f),32); // specular lighting
     vec3 specular = light.specularStrength*spec*light.color;
 
-    return (diffuse);
+    return (diffuse + specular);
 } 
 
 void main() {
     float ambientStrength = 0.1f;
 
     vec3 norm = normalize(Normal);
+    if (gl_FrontFacing) {
+        norm = -norm; // if not facing front side, reverse normal
+    }
+
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 ambient = ambientStrength * vec3(1.0f,1.0f,1.0f);
-    // if (!gl_FrontFacing) {
-    //     norm = -norm; // if not facing front side, reverse normal
-    // }
     vec3 lighting = ambient; 
-    for (int i=0;i < 2; i++) {
+    for (int i=0;i < numPointLights; i++) {
         lighting += CalcPointLight(pointLights[i], norm, viewDir);
     }
 
@@ -50,7 +51,7 @@ void main() {
         result = vec4(result.rgb * texture(Texture, TexCoord).rgb, texture(Texture, TexCoord).a);
     FragColor = result;
     // if (gl_FrontFacing) {
-    //     FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        // FragColor = vec4(1.0, 0.0, 0.0, 1.0);
     // } else {
-    //     FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+        // FragColor = vec4(0.0, 0.0, 1.0, 1.0);
 }
