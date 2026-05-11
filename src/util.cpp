@@ -127,6 +127,18 @@ std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices) {
     };
 }
 
+std::vector<float> calcRotatedVerts(std::vector<float> vertices, glm::mat4 rotation, uint stride) {
+    std::vector<float> rotatedVerts = vertices;
+    for (uint i = 0; i < vertices.size(); i = i + stride) {
+        glm::vec3 rotatedVert = rotation * glm::vec4(vertices[i+0], vertices[i+1], vertices[i+2], 1.0f);
+        rotatedVerts[i+0] = rotatedVert.x;
+        rotatedVerts[i+1] = rotatedVert.y;
+        rotatedVerts[i+2] = rotatedVert.z;
+    }
+
+    return rotatedVerts;
+}
+
 Rayhit Raycast(glm::vec3 origin, glm::vec3 direction, std::vector<Element*>& Objects, Element* caster) { // https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
     Rayhit hit;
     // float closest = FLT_MAX;

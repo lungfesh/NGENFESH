@@ -54,6 +54,7 @@ class Player {
             }
         }
         void attemptPickupElement();
+        void attemptOrientElement(glm::vec3 rotate);
         void attemptRocketElement();
     private:
         struct state { // probably gonna want to make some sort of humanoid class with this instead, and just use that
@@ -62,7 +63,7 @@ class Player {
             glm::vec3 velocity;
             glm::vec3 cameraOrientation;
             float speed = 5.0f;
-            float jumpPower = 6.0f;
+            float jumpPower = 2.5f;
             bool holdingSomething;
             Element* heldElement;
         };

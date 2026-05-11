@@ -26,7 +26,8 @@ void Player::init(std::vector<Element*>& Objects, Camera* cam) {
     // playerElement.vertices = calcBoundingBoxVerts(playerElement.bounding_box_corner1, playerElement.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f));
     // playerElement.indices = {CUBE_INDICES};
     playerElement.anchored = false;
-    playerElement.hasCollision = true;
+    playerElement.hasCollision = false;
+    playerElement.gravity = false;
     playerElement.isPlayer = true;
     playerElement.attachedCamera = attachedCamera;
     playerElement.init();
@@ -51,7 +52,11 @@ void Player::update() {
 
     playerState.moveState = (playerElement.grounded) ? 'g' : 'a';
     if (playerState.holdingSomething) { // if holding object, hold it
-        playerState.heldElement->position = getCameraPos() + getCameraOrientation() * 2.0f;
+        // playerState.heldElement->position = getCameraPos() + getCameraOrientation() * 3.0f;
+        glm::vec3 pos1 = (getCameraPos() + getCameraOrientation() * 3.0f);
+        if (playerState.heldElement->position == pos1) playerState.heldElement->velocity = glm::vec3{0.0f};
+        glm::vec3 vecTo = pos1 - playerState.heldElement->position;
+        playerState.heldElement->velocity = vecTo * 10.0f;
         playerState.heldElement->gravity = false;
     }
     // printf("player is %s\n", (playerState.moveState == 'g') ? "grounded" : "in air");
@@ -62,7 +67,7 @@ void Player::update() {
 void Player::keyInput(float deltaTime, KeyState keys[512], GLFWwindow* window) {
     glm::vec3 right = glm::normalize(glm::cross(camera()->getOrientation(),camera()->getUp()));
     glm::vec3 forward = camera()->getOrientation();
-    forward.y = 0.0f;
+    // forward.y = 0.0f;
     if (glm::length(forward) > 0.0f)
         forward = glm::normalize(forward);
     glm::vec3 moveDir = glm::vec3(0.0f);
@@ -85,18 +90,26 @@ void Player::keyInput(float deltaTime, KeyState keys[512], GLFWwindow* window) {
         moveDir = glm::normalize(moveDir);
 
     playerElement.velocity.x = moveDir.x * playerState.speed;
+    playerElement.velocity.y = moveDir.y * playerState.speed;
     playerElement.velocity.z = moveDir.z * playerState.speed;
     
     if (keys[GLFW_KEY_SPACE].currentState && getMoveState() == 'g') playerElement.velocity.y += playerState.jumpPower;
 
     if (keys[GLFW_KEY_E].currentState && !keys[GLFW_KEY_E].pastState) attemptPickupElement();
     if (keys[GLFW_KEY_F].currentState && !keys[GLFW_KEY_F].pastState) attemptRocketElement();
+    if (keys[GLFW_KEY_H].currentState)
+        attemptOrientElement(glm::vec3(0.01f,0.0f,0.0f));
+    if (keys[GLFW_KEY_J].currentState)
+        attemptOrientElement(glm::vec3(0.0f,0.01f,0.0f));
+    if (keys[GLFW_KEY_K].currentState)
+        attemptOrientElement(glm::vec3(0.0f,0.0f,0.01f));
 }
 
 void Player::attemptPickupElement() {
         if (playerState.holdingSomething) {
             playerState.holdingSomething = false;
             playerState.heldElement->gravity = true;
+            playerState.heldElement->velocity = glm::vec3{0.0f};
             playerState.heldElement = nullptr;
             return;
         }
@@ -104,12 +117,22 @@ void Player::attemptPickupElement() {
         Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), *WorldObjects, &playerElement);
         if (pickupHit.hitElement != nullptr) {
             if (!pickupHit.hitElement->holdable) return;
+            if (pickupHit.hitElement->debug) return;
             playerState.holdingSomething = true;
             playerState.heldElement = pickupHit.hitElement;
         }
 }
+void Player::attemptOrientElement(glm::vec3 rotate) {
+        Rayhit pickupHit = Raycast(camera()->getPos(), getCameraOrientation(), *WorldObjects, &playerElement);
+        if (pickupHit.hitElement != nullptr) {
+            // if (!pickupHit.hitElement->holdable) return;
+            // if (pickupHit.hitElement->debug) return;
+            // playerState.holdingSomething = true;
+            // playerState.heldElement = pickupHit.hitElement;
+            pickupHit.hitElement->rotation += rotate;
+        }
+}
 void Player::attemptRocketElement() {
-    printf("attempting..\n");
         if (playerState.holdingSomething) {
             // playerState.holdingSomething = false;
             // playerState.heldElement->gravity = true;
@@ -119,18 +142,7 @@ void Player::attemptRocketElement() {
 
         Rayhit rayHit = Raycast(camera()->getPos(), getCameraOrientation(), *WorldObjects, &playerElement);
         if (rayHit.hitElement != nullptr) {
-            if (rayHit.hitElement->holdVelocity.y != 0.0f) {
-                rayHit.hitElement->holdVelocity.y = 0.0f;
-                return;
-            }
-            // if (!rayHit.hitElement->anchored) return;
-            // playerState.holdingSomething = true;
-            // playerState.heldElement = rayHit.hitElement;
-            rayHit.hitElement->holdVelocity.y = 1.0f;
-            printf("launching!!!!\n");
-            // rayHit.hitElement->init();
-            // printf("ran init on hitElement\n");
-            // WorldObjects->push_back(rayHit.hitElement);
+            rayHit.hitElement->velocity = (rayHit.hitElement->position - getCameraPos() + getCameraOrientation()) * 10.0f;
         }
 }
 void Player::orient(float yaw, float pitch) { // sets to yaw and pitch

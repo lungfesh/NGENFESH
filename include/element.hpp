@@ -73,13 +73,14 @@ class Element {
         float rotationSpeed = 0.0f; // the speed at which we rotate
         glm::vec3 pivot = glm::vec3(0.0f); // what point to rotate around
         glm::vec3 rotation = glm::vec3(0.0f); // initial orientation
+        glm::vec3 pastRotation = glm::vec3(0.0f); // initial orientation
 
         float currentAngle = 0.0f; // to track rotation over time
 
         void init();
         void draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const;
         void update(float deltaTime);
-        glm::mat4 getMatrix() const;
+        glm::mat4 getMatrix(bool translate = true) const;
         bool getUseTexture() const;
         void physics_step(float dt, std::vector<Element*>& Objects);
         ~Element();

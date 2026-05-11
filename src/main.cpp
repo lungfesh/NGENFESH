@@ -43,7 +43,10 @@ int keysToCheck[512] = {
     GLFW_KEY_E,
     GLFW_KEY_F,
     GLFW_KEY_SPACE,
-    GLFW_KEY_ESCAPE
+    GLFW_KEY_ESCAPE,
+    GLFW_KEY_H,
+    GLFW_KEY_J,
+    GLFW_KEY_K
 }; // if this gets bigger, more complex, user defined keys, etc, more complex input system should be made
 //                                                               including callbacks, etc
 
@@ -158,7 +161,7 @@ int main() {
     quad.vertices = {QUAD_VERTICES};
     quad.indices = {QUAD_INDICES};
 
-    quad.bounding_box_corner1 = glm::vec3(-20.0f,-0.1f,-20.0f);
+    quad.bounding_box_corner1 = glm::vec3(-20.0f,-20.0f,-20.0f);
     quad.bounding_box_corner2 = glm::vec3(20.0f,0.0f,20.0f);
     quad.position.x = 0.0f;
     quad.position.y = -1.0f;
@@ -172,6 +175,15 @@ int main() {
     quad.init();
     addToWorld(&quad, Objects);
 
+    Element quadBB;
+    quadBB.debug = true;
+    quadBB.vertices = calcBoundingBoxVerts(quad.bounding_box_corner1, quad.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f),true);
+    quadBB.indices = {CUBEBB_INDICES};
+    quadBB.hasCollision = false;
+    quad.debugElement = &quadBB;
+    quadBB.init();
+    addToWorld(&quadBB,Objects);
+
     Element skybox1;
     skybox1.vertices = {QUAD_VERTICES};
     skybox1.indices = {QUAD_INDICES};
@@ -183,9 +195,69 @@ int main() {
     skybox1.sizey = 1.0f;
     skybox1.sizez = 20.0f;
     skybox1.position.x = 0.0f;
-    skybox1.position.y = 20.0f;
+    skybox1.position.y = 30.0f;
     skybox1.init();
     addToWorld(&skybox1, Objects);
+    Element skybox2;
+    skybox2.vertices = {QUAD_VERTICES};
+    skybox2.indices = {QUAD_INDICES};
+    skybox2.useTexture = true;
+    skybox2.textureFile = "textures/sky.jpeg";
+    skybox2.hasCollision = false;
+    skybox2.anchored = true;
+    skybox2.sizex = 20.0f;
+    skybox2.sizey = 1.0f;
+    skybox2.sizez = 20.0f;
+    skybox2.position.y = 10.0f;
+    skybox2.position.z = 20.0f;
+    skybox2.rotation = glm::vec3(3.14/2,0.0f,0.0f);
+    skybox2.init();
+    addToWorld(&skybox2, Objects);
+    Element skybox3;
+    skybox3.vertices = {QUAD_VERTICES};
+    skybox3.indices = {QUAD_INDICES};
+    skybox3.useTexture = true;
+    skybox3.textureFile = "textures/sky.jpeg";
+    skybox3.hasCollision = false;
+    skybox3.anchored = true;
+    skybox3.sizex = 20.0f;
+    skybox3.sizey = 1.0f;
+    skybox3.sizez = 20.0f;
+    skybox3.position.y = 10.0f;
+    skybox3.position.z = -20.0f;
+    skybox3.rotation = glm::vec3(3.14/2,0.0f,0.0f);
+    skybox3.init();
+    addToWorld(&skybox3, Objects);
+    Element skybox4;
+    skybox4.vertices = {QUAD_VERTICES};
+    skybox4.indices = {QUAD_INDICES};
+    skybox4.useTexture = true;
+    skybox4.textureFile = "textures/sky.jpeg";
+    skybox4.hasCollision = false;
+    skybox4.anchored = true;
+    skybox4.sizex = 20.0f;
+    skybox4.sizey = 1.0f;
+    skybox4.sizez = 20.0f;
+    skybox4.position.x = 20.0f;
+    skybox4.position.y = 10.0f;
+    skybox4.rotation = glm::vec3(0.0f,0.0f,3.14/2);
+    skybox4.init();
+    addToWorld(&skybox4, Objects);
+    Element skybox5;
+    skybox5.vertices = {QUAD_VERTICES};
+    skybox5.indices = {QUAD_INDICES};
+    skybox5.useTexture = true;
+    skybox5.textureFile = "textures/sky.jpeg";
+    skybox5.hasCollision = false;
+    skybox5.anchored = true;
+    skybox5.sizex = 20.0f;
+    skybox5.sizey = 1.0f;
+    skybox5.sizez = 20.0f;
+    skybox5.position.x = -20.0f;
+    skybox5.position.y = 10.0f;
+    skybox5.rotation = glm::vec3(0.0f,0.0f,3.14/2);
+    skybox5.init();
+    addToWorld(&skybox5, Objects);
 
     Element cube;
     cube.vertices = {CUBE_VERTICES};
@@ -208,6 +280,16 @@ int main() {
     }
     cube.init();
     addToWorld(&cube, Objects);
+
+    Element cubeBB;
+    cubeBB.debug = true;
+    cubeBB.vertices = calcBoundingBoxVerts(cube.bounding_box_corner1, cube.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f),true);
+    cubeBB.indices = {CUBEBB_INDICES};
+    cubeBB.hasCollision = false;
+    cube.debugElement = &cubeBB;
+    cubeBB.init();
+    addToWorld(&cubeBB,Objects);
+
     Element wall1;
     wall1.vertices = {QUAD_VERTICES};
     for (size_t i = 0; i < wall1.vertices.size(); i=i+11) { // change wall1 colour to red, should probably make a function for this
@@ -222,6 +304,15 @@ int main() {
     wall1.position = glm::vec3(2.0f, 2.0f, 4.0f);
     wall1.init();
     addToWorld(&wall1,Objects);
+
+    Element wall1BB;
+    wall1BB.debug = true;
+    wall1BB.vertices = calcBoundingBoxVerts(wall1.bounding_box_corner1, wall1.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f),true);
+    wall1BB.indices = {CUBEBB_INDICES};
+    wall1BB.hasCollision = false;
+    wall1.debugElement = &wall1BB;
+    wall1BB.init();
+    addToWorld(&wall1BB,Objects);
   
     Element lightSource;
     lightSource.vertices = {CUBE_VERTICES};
@@ -249,8 +340,6 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    printf("size of pointlights: %i\n", PointLights.size());
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
         currentFrame = glfwGetTime();
@@ -271,10 +360,6 @@ int main() {
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
         for (size_t i = 0; i < PointLights.size(); i++) {
-            printf("iteration %i-----\n", i);
-            printf("POSITION %f, %f, %f\n", PointLights[i]->position.x, PointLights[i]->position.y, PointLights[i]->position.z);
-            printf("COLOR %f, %f, %f\n", PointLights[i]->pointLightColor.x, PointLights[i]->pointLightColor.y, PointLights[i]->pointLightColor.z);
-            printf("SPEC STRENGTH %f\n", PointLights[i]->pointLightSpecStrength);
             objectShader->setVec3("pointLights[" + std::to_string(i) + "].position", PointLights[i]->position);
             objectShader->setVec3("pointLights[" + std::to_string(i) + "].color", PointLights[i]->pointLightColor);
             objectShader->setFloat("pointLights[" + std::to_string(i) + "].specularStrength", PointLights[i]->pointLightSpecStrength);
@@ -286,7 +371,6 @@ int main() {
         };
         glfwSwapBuffers(window);
         glfwPollEvents();
-        printf("done rendering frame -----\n");
     }
     glfwDestroyWindow(window);
     glfwTerminate();

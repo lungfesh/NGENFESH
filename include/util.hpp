@@ -16,6 +16,7 @@ inline glm::vec3 calcNormal(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
 }
 // given list of vertices, return min and max
 std::vector<glm::vec3> calcBoundingBoxPoints(std::vector<float> vertices);
+std::vector<float> calcRotatedVerts(std::vector<float> vertices, glm::mat4 rotation, uint stride);
 
 struct Rayhit {
     Element* hitElement = nullptr;

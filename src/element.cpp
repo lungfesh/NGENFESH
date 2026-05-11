@@ -90,18 +90,38 @@ void Element::update(float deltaTime) { // deltaTime is how long since last fram
         currentAngle += rotationSpeed * deltaTime;
         if (currentAngle > glm::two_pi<float>()) currentAngle -= glm::two_pi<float>();
     }
+    if ((glm::abs(rotation.x - pastRotation.x) > 0.001f) || ((glm::abs(rotation.y - pastRotation.y) > 0.001f)) || (glm::abs(rotation.z - pastRotation.z) > 0.001f)) {
+        glm::mat4 rotateMatrix(1.0f);
+        rotateMatrix = glm::rotate(rotateMatrix, rotation.x, glm::vec3(1,0,0));
+        rotateMatrix = glm::rotate(rotateMatrix, rotation.y, glm::vec3(0,1,0));
+        rotateMatrix = glm::rotate(rotateMatrix, rotation.z, glm::vec3(0,0,1));
+        std::vector<float> rotatedVerts = calcRotatedVerts(vertices, getMatrix(false), 11);
+        std::vector<glm::vec3> rotatedAABB = calcBoundingBoxPoints(rotatedVerts);
+        bounding_box_corner1 = rotatedAABB[0];
+        bounding_box_corner2 = rotatedAABB[1];
+
+        if (debugElement != nullptr) {
+            debugElement->vertices = calcBoundingBoxVerts(bounding_box_corner1, bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f),true);
+            debugElement->init();
+        }
+    }
+
+    pastRotation = rotation;
 }
         
-glm::mat4 Element::getMatrix() const { // get model matrix
+glm::mat4 Element::getMatrix(bool translate) const { // get model matrix
     glm::mat4 model = glm::mat4(1.0f); // define 4x4 matrix
-    model = glm::translate(model, position); // add position translation to matrix
-    model = glm::scale(model, glm::vec3(sizex, sizey, sizez));
-    if (rotate) { // if we're rotating it
+    if (translate) {
+        model = glm::translate(model, position); // add position translation to matrix
         model = glm::translate(model, pivot); // translate first by pivot point
-        model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
-        model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
-        model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
-        model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
+    }
+
+    model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0)); // rotate on x,y,z
+    model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+    model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
+    model = glm::rotate(model, currentAngle, rotateAxis); // if continuosly rotating, rotate by current angle on rotate axis
+    model = glm::scale(model, glm::vec3(sizex, sizey, sizez));
+    if (translate) {
         model = glm::translate(model, -pivot); // translate by negative pivot point, no idea why we do this i think i stole this from somewhere
     }
     return model;
