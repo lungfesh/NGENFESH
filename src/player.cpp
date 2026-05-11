@@ -26,8 +26,8 @@ void Player::init(std::vector<Element*>& Objects, Camera* cam) {
     // playerElement.vertices = calcBoundingBoxVerts(playerElement.bounding_box_corner1, playerElement.bounding_box_corner2, glm::vec3(1.0f,0.0f,0.0f));
     // playerElement.indices = {CUBE_INDICES};
     playerElement.anchored = false;
-    playerElement.hasCollision = false;
-    playerElement.gravity = false;
+    playerElement.hasCollision = true;
+    playerElement.gravity = true;
     playerElement.isPlayer = true;
     playerElement.attachedCamera = attachedCamera;
     playerElement.init();
@@ -67,7 +67,7 @@ void Player::update() {
 void Player::keyInput(float deltaTime, KeyState keys[512], GLFWwindow* window) {
     glm::vec3 right = glm::normalize(glm::cross(camera()->getOrientation(),camera()->getUp()));
     glm::vec3 forward = camera()->getOrientation();
-    // forward.y = 0.0f;
+    forward.y = 0.0f; // comment this out to disable FPS movement
     if (glm::length(forward) > 0.0f)
         forward = glm::normalize(forward);
     glm::vec3 moveDir = glm::vec3(0.0f);
@@ -90,7 +90,7 @@ void Player::keyInput(float deltaTime, KeyState keys[512], GLFWwindow* window) {
         moveDir = glm::normalize(moveDir);
 
     playerElement.velocity.x = moveDir.x * playerState.speed;
-    playerElement.velocity.y = moveDir.y * playerState.speed;
+    // playerElement.velocity.y = moveDir.y * playerState.speed;
     playerElement.velocity.z = moveDir.z * playerState.speed;
     
     if (keys[GLFW_KEY_SPACE].currentState && getMoveState() == 'g') playerElement.velocity.y += playerState.jumpPower;
