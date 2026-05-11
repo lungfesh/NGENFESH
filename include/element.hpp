@@ -36,6 +36,9 @@ class Element {
         
         bool emitPointLight = false;
         glm::vec3 pointLightColor;
+        float pointLightConstant = 1.0f;
+        float pointLightLinear = 0.09f;
+        float pointLightQuadratic = 0.032f; // 0.7f linear and 1.8 quadratic will cover a distance of ~7
         float pointLightSpecStrength = 0.5f;
 
         // bounding_box_corner1 is min, bounding_box_corner2 is max

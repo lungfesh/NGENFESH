@@ -13,12 +13,19 @@ struct PointLight {
     vec3 position;
     vec3 color;
     float specularStrength;
+
+    float constant;
+    float linear;
+    float quadratic;
 };
 uniform PointLight pointLights[16];
 uniform int numPointLights;
 
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir)
 {
+    float distance = length(light.position - FragPos);
+    float attenuation = 1.0/(light.constant+light.linear*distance+light.quadratic*(distance*distance));
+
     vec3 lightDir = normalize(light.position - FragPos);
     vec3 reflectDir = reflect(-lightDir, normal);
     // diffuse shading
@@ -28,11 +35,15 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir)
     float spec = pow(max(dot(viewDir,reflectDir),0.0f),32); // specular lighting
     vec3 specular = light.specularStrength*spec*light.color;
 
+    diffuse *= attenuation;
+    specular *= attenuation;
+    // ambient *= attenuation;
+
     return (diffuse + specular);
 } 
 
 void main() {
-    float ambientStrength = 0.1f;
+    float ambientStrength = 0.0f;
 
     vec3 norm = normalize(Normal);
     if (gl_FrontFacing) {

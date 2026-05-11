@@ -333,7 +333,7 @@ int main() {
         else
             Objects[i]->shader = objectShader;
     }
-    // lightSource.shader = lightShader;
+    lightSource.shader = debugShader;
 
     float dt = 1.0f/60.0f;
     float accumulator = 0.0f;
@@ -363,7 +363,10 @@ int main() {
             objectShader->setVec3("pointLights[" + std::to_string(i) + "].position", PointLights[i]->position);
             objectShader->setVec3("pointLights[" + std::to_string(i) + "].color", PointLights[i]->pointLightColor);
             objectShader->setFloat("pointLights[" + std::to_string(i) + "].specularStrength", PointLights[i]->pointLightSpecStrength);
+            objectShader->setFloat("pointLights[" + std::to_string(i) + "].constant", PointLights[i]->pointLightConstant);
+            objectShader->setFloat("pointLights[" + std::to_string(i) + "].quadratic", PointLights[i]->pointLightQuadratic);
         }
+        
         objectShader->setInt("numPointLights", PointLights.size());
         for (Element* e : Objects) {
             e->update(deltaTime);
