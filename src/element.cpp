@@ -17,6 +17,7 @@
 #include "shader_def.hpp"
 
 std::vector<Element*> PointLights;
+bool renderDebug = true;
 void Element::init() {
     if (useTexture)
         texture.init(textureFile);
@@ -57,6 +58,7 @@ void Element::init() {
     // debugVAOVBO = newDebugLine();
 };
 void Element::draw(const glm::mat4& view, const glm::mat4& projection, Element& lightSource, glm::vec3 cameraPos, float time) const {
+    if (!renderDebug && debug) return;
     if (!shader) return;
 
 

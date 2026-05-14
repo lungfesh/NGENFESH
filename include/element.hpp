@@ -131,5 +131,5 @@ class HUDElement {
 // returns id
 int addToWorld(Element* e, std::vector<Element*>& Objects);
 extern std::vector<Element*> PointLights;
-
+extern bool renderDebug;
 #endif

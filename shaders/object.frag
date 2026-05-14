@@ -43,7 +43,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir)
 } 
 
 void main() {
-    float ambientStrength = 0.0f;
+    float ambientStrength = 0.01f;
 
     vec3 norm = normalize(Normal);
     if (gl_FrontFacing) {

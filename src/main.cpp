@@ -46,7 +46,8 @@ int keysToCheck[512] = {
     GLFW_KEY_ESCAPE,
     GLFW_KEY_H,
     GLFW_KEY_J,
-    GLFW_KEY_K
+    GLFW_KEY_K,
+    GLFW_KEY_P
 }; // if this gets bigger, more complex, user defined keys, etc, more complex input system should be made
 //                                                               including callbacks, etc
 
@@ -359,12 +360,14 @@ int main() {
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(75.0f), windowWidth / windowHeight, 0.1f, 100.0f);
+        objectShader->use();
         for (size_t i = 0; i < PointLights.size(); i++) {
             objectShader->setVec3("pointLights[" + std::to_string(i) + "].position", PointLights[i]->position);
             objectShader->setVec3("pointLights[" + std::to_string(i) + "].color", PointLights[i]->pointLightColor);
             objectShader->setFloat("pointLights[" + std::to_string(i) + "].specularStrength", PointLights[i]->pointLightSpecStrength);
             objectShader->setFloat("pointLights[" + std::to_string(i) + "].constant", PointLights[i]->pointLightConstant);
             objectShader->setFloat("pointLights[" + std::to_string(i) + "].quadratic", PointLights[i]->pointLightQuadratic);
+            objectShader->setFloat("pointLights[" + std::to_string(i) + "].linear", PointLights[i]->pointLightLinear);
         }
         
         objectShader->setInt("numPointLights", PointLights.size());

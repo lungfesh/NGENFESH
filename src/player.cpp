@@ -103,6 +103,9 @@ void Player::keyInput(float deltaTime, KeyState keys[512], GLFWwindow* window) {
         attemptOrientElement(glm::vec3(0.0f,0.01f,0.0f));
     if (keys[GLFW_KEY_K].currentState)
         attemptOrientElement(glm::vec3(0.0f,0.0f,0.01f));
+    
+    if (keys[GLFW_KEY_P].currentState && !keys[GLFW_KEY_P].pastState)
+        renderDebug = !renderDebug;
 }
 
 void Player::attemptPickupElement() {
